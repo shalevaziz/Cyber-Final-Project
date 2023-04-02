@@ -33,6 +33,9 @@ class Client:
             if command == b'FREEZE':
                 self.freezer.freeze()
                 self.send_data_tcp("FROZEN")
+            elif command == b'UNFREEZE':
+                self.freezer.unfreeze()
+                self.send_data_tcp("UNFROZEN")
 
             
 

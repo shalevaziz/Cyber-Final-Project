@@ -40,6 +40,8 @@ class Server:
             choice = input("What do you want to do? (1) Freeze (2) Unfreeze (3) Exit: ")
             if choice == '1':
                 self.freeze_PC(client_socket)
+            elif choice == '2':
+                self.unfreeze_PC(client_socket)
             
     def freeze_PC(self, client_socket):
         """This function freezes the PC of the client
@@ -53,7 +55,20 @@ class Server:
         while confirmation != "FROZEN":
             self.send_data_tcp("FREEZE", client_socket)
             confirmation = self.recv_data_tcp(client_socket).decode()
-            
+
+    def unfreeze_PC(self, client_socket):
+        """This function unfreezes the PC of the client
+
+        Args:
+            client_socket (socket): The socket used to communicate with the client
+        """
+        self.send_data_tcp("UNFREEZE", client_socket)
+        
+        confirmation = self.recv_data_tcp(client_socket).decode()
+        while confirmation != "UNFROZEN":
+            self.send_data_tcp("UNFREEZE", client_socket)
+            confirmation = self.recv_data_tcp(client_socket).decode()
+    
     def initiate_encrypted_data_transfer(self, client_socket):
         """This function initiates the encrypted data transfer with the client
 
