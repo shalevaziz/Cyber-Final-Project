@@ -82,7 +82,8 @@ class Server:
         
         self.key = data[:32]
         self.iv = data[32:]
-        self.cipher = AES.new(self.key, AES.MODE_CBC, iv=self.iv)
+        self.cipher_encrypt = AES.new(self.key, AES.MODE_CBC, iv=self.iv)
+        self.cipher_decrypt = AES.new(self.key, AES.MODE_CBC, iv=self.iv)
     
     def split_data(self, encrypted_msg):
         """This function splits the encrypted message into packets of 4096 bytes.
@@ -117,7 +118,7 @@ class Server:
             bytes: The decrypted data, or False if the decryption failed
         """
         try:
-            msg = self.cipher.decrypt(data)
+            msg = self.cipher_decrypt.decrypt(data)
             msg = unpad(msg, AES.block_size)
         except:
             msg = False
@@ -142,7 +143,7 @@ class Server:
         return self.decrypt_data(full_data)
     
     def send_data_tcp(self, msg, client_socket):
-        ciphertext = self.cipher.encrypt(pad(msg.encode(), AES.block_size))
+        ciphertext = self.cipher_encrypt.encrypt(pad(msg.encode(), AES.block_size))
         packets = self.split_data(ciphertext)
         for packet in packets:
             client_socket.send(packet)
@@ -155,7 +156,7 @@ class Server:
             client_socket (socket): The socket used to communicate with the client
             client_address (tuple): The address of the client
         """
-        ciphertext = self.cipher.encrypt(pad(msg.encode(), AES.block_size))
+        ciphertext = self.cipher_encrypt.encrypt(pad(msg.encode(), AES.block_size))
         packets = self.split_data(ciphertext)
         for packet in packets:
             client_socket.sendto(packet, client_address)

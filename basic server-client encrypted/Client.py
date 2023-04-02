@@ -26,8 +26,9 @@ class Client:
     def handle_connection(self):
         """This function handles the connection to the server.
         """
+        print("Connection established")
         self.initiate_encrypted_data_transfer()
-        
+        print("Encrypted data transfer established")
         while True:
             command = self.recv_data_tcp()
             if command == b'FREEZE':
@@ -53,8 +54,9 @@ class Client:
             server_public_key (rsa.PublicKey): The public key of the server.
         """
         self.key = get_random_bytes(32)
-        self.cipher = AES.new(self.key, AES.MODE_CBC)
-        encrypted_key = rsa.encrypt(b''.join([self.key, self.cipher.iv]), server_public_key)
+        self.cipher_decrypt = AES.new(self.key, AES.MODE_CBC)
+        self.cipher_encrypt = AES.new(self.key, AES.MODE_CBC, self.cipher_decrypt.iv)
+        encrypted_key = rsa.encrypt(b''.join([self.key, self.cipher_decrypt.iv]), server_public_key)
         self.s_tcp.send(encrypted_key)
     
     def split_data(self, encrypted_msg):
@@ -86,7 +88,7 @@ class Client:
         Args:
             msg (string): The message to send.
         """
-        ciphertext = self.cipher.encrypt(pad(msg.encode(), AES.block_size))
+        ciphertext = self.cipher_encrypt.encrypt(pad(msg.encode(), AES.block_size))
         packets = self.split_data(ciphertext)
         for packet in packets:
             self.s_tcp.send(packet)
@@ -103,7 +105,7 @@ class Client:
         """
         try:
             print(data)
-            msg = self.cipher.decrypt(data)
+            msg = self.cipher_decrypt.decrypt(data)
             msg = unpad(msg, AES.block_size)
         except:
             msg = False
@@ -126,7 +128,7 @@ class Client:
         Args:
             msg (string): The message to send.
         """
-        encrypted_msg = self.cipher.encrypt(pad(msg.encode(), AES.block_size))
+        encrypted_msg = self.cipher_encrypt.encrypt(pad(msg.encode(), AES.block_size))
         packets = self.split_data(encrypted_msg)
         for packet in packets:
             self.s_tcp.sendto(packet, (self.server_ip, self.server_port))
@@ -143,4 +145,4 @@ class Client:
         return self.decrypt_data(full_data)
         
 
-client = Client('127.0.0.1', 25565)
+client = Client('192.168.68.122', 25565)
