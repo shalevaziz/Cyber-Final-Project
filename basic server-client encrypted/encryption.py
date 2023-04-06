@@ -1,30 +1,7 @@
-import rsa
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-import Crypto
-import socket
-from threading import Thread
-#random number generator
-import random
-#create random text length 4096
-chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', ';', ':', "'", '"', ',', '.', '<', '>', '/', '?', '`', '~']
-text = ''
-for i in range(4096):
-    text += chars[random.randint(0, len(chars) - 1)]
-with open('text.txt', 'w') as f:
-    f.write(text)
-"""cipher_client = AES.new(key, AES.MODE_EAX)
-cipher_client.update(b"")
-ciphertext, tag = cipher_client.encrypt_and_digest(b"Hello World")
-#decrypt
-cipher_server = AES.new(key, AES.MODE_EAX, cipher_client.nonce)
-plaintext = cipher_server.decrypt_and_verify(ciphertext, tag)
-print(len(cipher_client.nonce))
+from basics import Cipher
 
-ciphertext, tag = cipher_client.encrypt_and_digest(b"Hello World")
-#decrypt
-plaintext = cipher_server.decrypt_and_verify(ciphertext, tag)
-print(plaintext)"""
+c = Cipher(key = b'U,\xeb\x1f5O;z)t\xdfv\xe4p]\xe2\x15@\x85\x8e\x0e\x1c\xbc\x97\x0b\x16\xf1\x81\xa7\xcb\x9aa', iv = b'\xdd\x15\xcd4\xa4f\t\xe9\x12\xf4>J\xa6xK[')
+print(c.decrypt(b'\xd3\xb9\xe0\xc3\xb3\x17q\xa4\xef\x80\x8b\x91\xc0d\x0bD\xd8\xe8\xcc\xa3o\x8a\xc4\xfa\xa6U\xb5\x1d"\xe2\xb32v\xac\x920\x88\xfa(\n\xa8Dn\xb3;\xbd\xe2\xae'))
 
 
 
