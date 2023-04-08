@@ -1,10 +1,11 @@
 import basics
 import ScreenShare
-
+import socket
 class Server(basics.Encrypted_TCP_Server):
     def __init__(self, ip='0.0.0.0', port=25565):
         super().__init__(ip, port)
         self.clients = {}
+        print(f'Server started on {socket.gethostbyname(socket.gethostname())}:{port}')
     
     def handle_connection(self, client_soc, client_address):
         try:

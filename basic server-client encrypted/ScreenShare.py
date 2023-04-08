@@ -62,10 +62,10 @@ class Encrypted_TCP_Server_For_ScreenShare:
         first_packet = self.cipher.encrypt(first_packet)
         print(first_packet, len(first_packet))
 
-        self.client_socket.sendall(first_packet)
+        self.client_socket.send(first_packet)
         
         for packet in packets:
-            self.client_socket.sendall(packet)
+            self.client_socket.send(packet)
 
     def recv_data(self, packet_size=4096):
         
@@ -155,10 +155,10 @@ class Encrypted_TCP_Client_For_ScreenShare:
         first_packet += str(hex(packet_size)).encode().replace(b'0x', b'').zfill(4)
         first_packet += str(hex(len(packets[-1]))).encode().replace(b'0x', b'').zfill(4)
         first_packet = self.cipher.encrypt(first_packet)
-        self.socket.sendall(first_packet)
+        self.socket.send(first_packet)
         
         for packet in packets:
-            self.socket.sendall(packet)
+            self.socket.send(packet)
 
     def recv_data(self):
         

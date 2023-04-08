@@ -167,12 +167,12 @@ class Cipher_ECB:
         Returns:
             bytes: The decrypted message
         """
-        ciphertext = msg
+        decrypted = self.__cipher.decrypt(msg[:len(msg)-AES.block_size])
         try:
-            return unpad(self.__cipher.decrypt(ciphertext), AES.block_size)    
+            decrypted += unpad(self.__cipher.decrypt(msg[-AES.block_size:]), AES.block_size)
         except ValueError as e:
             print(e)
-            return None
+        return decrypted
     
     def set_key(self, key):
         """This function sets the key of the cipher.
