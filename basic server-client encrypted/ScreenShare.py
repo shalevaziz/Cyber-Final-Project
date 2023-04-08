@@ -60,10 +60,12 @@ class Encrypted_TCP_Server_For_ScreenShare:
         first_packet += str(hex(packet_size)).encode().replace(b'0x', b'').zfill(4)
         first_packet += str(hex(len(packets[-1]))).encode().replace(b'0x', b'').zfill(4)
         first_packet = self.cipher.encrypt(first_packet)
-        self.client_socket.send(first_packet)
+        print(first_packet, len(first_packet))
+
+        self.client_socket.sendall(first_packet)
         
         for packet in packets:
-            self.client_socket.send(packet)
+            self.client_socket.sendall(packet)
 
     def recv_data(self, packet_size=4096):
         
@@ -153,10 +155,10 @@ class Encrypted_TCP_Client_For_ScreenShare:
         first_packet += str(hex(packet_size)).encode().replace(b'0x', b'').zfill(4)
         first_packet += str(hex(len(packets[-1]))).encode().replace(b'0x', b'').zfill(4)
         first_packet = self.cipher.encrypt(first_packet)
-        self.client_socket.send(first_packet)
+        self.socket.sendall(first_packet)
         
         for packet in packets:
-            self.socket.send(packet)
+            self.socket.sendall(packet)
 
     def recv_data(self):
         
@@ -166,6 +168,7 @@ class Encrypted_TCP_Client_For_ScreenShare:
         num_packets = int(data[:4], 16)
         packet_size = int(data[4:8], 16)
         last_packet_size = int(data[8:12], 16)
+        
         for i in range(num_packets-1):
             data = self.socket.recv(packet_size)
             full_data += data
@@ -219,6 +222,7 @@ class ScreenShare_Viewer:
         
         while self.img is None:
             pass
+        start = time.time()
         while self.stream and state >= 0:
             try:
                 state = cv2.getWindowProperty('frame', 0)
@@ -229,7 +233,10 @@ class ScreenShare_Viewer:
             cv2.imshow('frame', self.img)
             cv2.waitKey(1)
         
-        
+        print('Stream ended')
+        print('Frame amount: ' + str(self.frame_num))
+        print('Time: ' + str(time.time() - start))
+        print('FPS: ' + str(self.frame_num / (time.time() - start)))
         self.stream = False
 
     def start_stream(self):

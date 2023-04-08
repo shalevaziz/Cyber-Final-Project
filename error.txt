@@ -1,0 +1,1 @@
+error: OpenCV(4.7.0) D:\a\opencv-python\opencv-python\opencv\modules\highgui\src\window_w32.cpp:565: error: (-27:Null pointer) NULL window: 'frame' in function 'cvGetModeWindow_W32'
