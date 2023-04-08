@@ -43,7 +43,7 @@ class Client(basics.Encrypted_TCP_Client):
         msg = ip + port
         self.send_data(msg)
         print(self.cipher.get_key()[:8])
-        transmitter = ScreenShare.ScreenShare_Transmitter('0.0.0.0', int(port, 16), self.cipher.get_key()[:8])
+        transmitter = ScreenShare.ScreenShare_Transmitter('0.0.0.0', int(port, 16), self.cipher.get_key()[:16])
         try:
             transmitter.start_stream()
         except ConnectionAbortedError:

@@ -29,7 +29,7 @@ class Server(basics.Encrypted_TCP_Server):
         port = int(ip_and_port[8:], 16)
 
         print(self.cipher.get_key()[:8])
-        receiver = ScreenShare.ScreenShare_Viewer(ip, port, self.cipher.get_key()[:8])
+        receiver = ScreenShare.ScreenShare_Viewer(ip, port, self.cipher.get_key()[:16])
         receiver.start_stream()
 
 def main():

@@ -11,7 +11,7 @@ import cv2
 from pyautogui import screenshot
 import numpy as np
 import pyautogui
-from basics import Cipher_DES, Encrypted_TCP_Socket, Useful_Functions
+from basics import Cipher_ECB, Encrypted_TCP_Socket, Useful_Functions
 from threading import Thread, Lock
 from logger import Logger
 
@@ -32,7 +32,7 @@ class Encrypted_TCP_Server_For_ScreenShare:
 
         self.logger_name = 'Encrypted_TCP_Server_For_ScreenShare'
         logger.create_logger(self.logger_name, 'ScreenShare')
-        self.cipher = Cipher_DES(key)
+        self.cipher = Cipher_ECB(key)
         self.connected = False
         self.start()
     
@@ -138,7 +138,7 @@ class Encrypted_TCP_Client_For_ScreenShare:
         self.socket.connect((self.ip, self.port))
         print('Connected to ' + self.ip + ':' + str(self.port))
         self.connected = True
-        self.cipher = Cipher_DES(key)
+        self.cipher = Cipher_ECB(key)
         
     def send_data(self, msg, packet_size=4096):
         """This function sends data to the client
@@ -168,7 +168,7 @@ class Encrypted_TCP_Client_For_ScreenShare:
         num_packets = int(data[:4], 16)
         packet_size = int(data[4:8], 16)
         last_packet_size = int(data[8:12], 16)
-        
+
         for i in range(num_packets-1):
             data = self.socket.recv(packet_size)
             full_data += data

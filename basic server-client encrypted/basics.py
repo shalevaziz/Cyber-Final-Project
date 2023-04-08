@@ -20,7 +20,6 @@ import uuid
 #import Fernet
 from cryptography.fernet import Fernet
 from Crypto.Cipher import DES
-
 logger = Logger(debugging_mode=True)
 
 class Useful_Functions:
@@ -128,11 +127,11 @@ class Cipher:
         """
         return self.__key
 
-class Cipher_DES:
+class Cipher_ECB:
     """This class is used to encrypt and decrypt messages using DES mode.
     It also authenticates the messages using HMAC.
     """
-    def __init__(self, key=None, bytes=8):
+    def __init__(self, key=None, bytes=16):
         """This function initializes the cipher.
 
         Args:
@@ -145,7 +144,7 @@ class Cipher_DES:
         else:
             self.__key = key
         
-        self.__cipher = DES.new(self.__key, DES.MODE_ECB)
+        self.__cipher = AES.new(self.__key, AES.MODE_ECB)
         
     def encrypt(self, msg):
         """This function encrypts the message
@@ -156,7 +155,7 @@ class Cipher_DES:
         Returns:
             bytes: The encrypted message
         """
-        ciphertext = self.__cipher.encrypt(pad(msg, DES.block_size))
+        ciphertext = self.__cipher.encrypt(pad(msg, AES.block_size))
         return ciphertext
     
     def decrypt(self, msg):
@@ -170,7 +169,7 @@ class Cipher_DES:
         """
         ciphertext = msg
         try:
-            return unpad(self.__cipher.decrypt(ciphertext), DES.block_size)      
+            return unpad(self.__cipher.decrypt(ciphertext), AES.block_size)    
         except ValueError as e:
             print(e)
             return None
@@ -504,14 +503,19 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
 
     
 def main():
-    key = b'secretki'
-    server = Encrypted_UDP_Socket('127.0.0.1', 25566, '127.0.0.1', 25565, b'12345678')
-    logger.create_logger('receiver')
-    server.logger_name = 'receiver'
-    file = server.recv_data()
-    with open('test.txt', 'wb') as f:
-        f.write(file)
+    cipher = DES.new(get_random_bytes(8), DES.MODE_ECB)
+    msg = b'01234567891234567'
+    msg = cipher.encrypt(pad(msg, DES.block_size))
+    #msg = msg[:1] + b'a' + msg[2:]
+    print(len(msg))
+    start = time.time()
+   
+
+    decrypted_msg = unpad(cipher.decrypt(msg), AES.block_size)
+    print(decrypted_msg)
+
     
+    print(time.time() - start)
 
 
 if __name__ == "__main__":
