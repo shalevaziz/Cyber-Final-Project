@@ -1,3 +1,4 @@
+from operator import le
 import socket
 import cv2
 import numpy as np
@@ -5,28 +6,33 @@ import time
 import threading
 import pyautogui
 import pickle
+from basics import Cipher_ECB
+import dxcam
+
 
 RESULUTIONS = (1536, 864)
 QUALITY = 95
-PACKET_SIZE = 65507
+PACKET_SIZE = 65504
 HEADER_SIZE = 7
 
-def take_screenshot():
+def take_screenshot(camera):
     """This function takes a screenshot of the screen.
 
     Returns:
         bytes: The screenshot of the screen.
     """
-    frame = pyautogui.screenshot()
+    """frame = pyautogui.screenshot()
     frame = np.array(frame)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = cv2.resize(frame, RESULUTIONS, interpolation=cv2.INTER_AREA)"""
+    frame = camera.get_latest_frame()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     frame = cv2.resize(frame, RESULUTIONS, interpolation=cv2.INTER_AREA)
-    
     result, frame = cv2.imencode('.jpg', frame)
     frame = frame.tobytes()
     return frame
 
-def split_into_packets(data):
+def split_into_packets(data, cipher):
     """This function splits the data into packets.
 
     Args:
@@ -43,6 +49,7 @@ def split_into_packets(data):
 
     for i in range(len(packets)):
         packets[i] = len_data + num_of_packets + i.to_bytes(2, 'big') + packets[i]
+        packets[i] = cipher.encrypt(packets[i])
     #print(len(packets[0]), len(packets))
     """first = str(hex(len(packets))).zfill(4).encode()
     packets.insert(0, first)"""
@@ -69,21 +76,29 @@ def send_data(packets, s, address):
 
 
 def main():
-    local_ip = socket.gethostbyname(socket.gethostname())
+    local_ip = '10.30.57.24'
     local_port = 25566
-    dest_ip = local_ip
+    dest_ip = '10.30.56.247'
     dest_port = 25565
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind((local_ip, local_port))
     start = time.time()
-    for i in range(1000):
-        sct = take_screenshot()
-        with open('screenshot', 'wb') as f:
-            f.write(sct)
-        packets = split_into_packets(sct)
+    timings = []
+    c = Cipher_ECB(b'1234567812345678')
+    camera = dxcam.create()
+    camera.start(target_fps = 24)
+    for i in range(500):
+        #timings.append(time.time())
+        sct = take_screenshot(camera)
+        #timings.append(time.time())
+        packets = split_into_packets(sct, c)
+        #timings.append(time.time())
         send_data(packets, s, (dest_ip, dest_port))
-        
+        #timings.append(time.time())
+
+    for i in range(len(timings)-1):
+        print(timings[i+1] - timings[i])
     print(time.time() - start)
 
 if __name__ == '__main__':
