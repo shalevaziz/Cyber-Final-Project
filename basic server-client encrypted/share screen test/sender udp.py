@@ -69,9 +69,9 @@ def send_data(packets, s, address):
 
 
 def main():
-    local_ip = '192.168.68.113'
+    local_ip = socket.gethostbyname(socket.gethostname())
     local_port = 25566
-    dest_ip = '192.168.68.113'
+    dest_ip = local_ip
     dest_port = 25565
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

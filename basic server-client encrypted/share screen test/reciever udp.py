@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import time
 import threading
-import pyautogui
 import pickle
 RESULUTIONS = (1536, 864)
 QUALITY = 95
@@ -22,8 +21,8 @@ def recv_packets(s):
     LOCK.acquire()
     #s.sendto(b'1', ('192.168.68.113', 25566))
     first, _ = s.recvfrom(PACKET_SIZE)
-    data_len = int.from_bytes(first[:3])
-    num_packets = int.from_bytes(first[3:5])
+    data_len = int.from_bytes(first[:3], 'big')
+    num_packets = int.from_bytes(first[3:5], 'big')
     packets.append(first[5:])
     
     for i in range(num_packets-1):
@@ -32,7 +31,7 @@ def recv_packets(s):
         #print(i)
     LOCK.release()
 
-    packets = sorted(packets, key=lambda x: int.from_bytes(x[:2]))
+    packets = sorted(packets, key=lambda x: int.from_bytes(x[:2], 'big'))
     packets = [packet[2:] for packet in packets]
     data = b''.join(packets)
     data = data[:data_len]
@@ -61,7 +60,7 @@ def main():
     """This function starts the ScreenShare.
     """
     global data
-    local_ip = '192.168.68.113'
+    local_ip = socket.gethostbyname(socket.gethostname())
     port = 25565
 
 
