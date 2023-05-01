@@ -300,7 +300,6 @@ class Encrypted_UDP_Socket:
 
         self.cipher = Cipher_DES(key)
         
-
     def send_data(self, msg, packet_size=16384):
         """This function encrypts the message and sends it to the server.
 

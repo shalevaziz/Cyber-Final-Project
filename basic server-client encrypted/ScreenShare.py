@@ -54,27 +54,27 @@ class Encrypted_TCP_Server_For_ScreenShare:
         if type(msg) == str:
             msg = msg.encode()
 
-        ciphertext = self.cipher.encrypt(msg)
+        #ciphertext = self.cipher.encrypt(msg)
+        ciphertext = msg
         packets = Useful_Functions.split_data(ciphertext, packet_size=packet_size)
-        first_packet = str(hex(len(packets))).encode().replace(b'0x', b'').zfill(4)
-        first_packet += str(hex(packet_size)).encode().replace(b'0x', b'').zfill(4)
-        first_packet += str(hex(len(packets[-1]))).encode().replace(b'0x', b'').zfill(4)
-        first_packet = self.cipher.encrypt(first_packet)
+        first_packet = len(packets).to_bytes(1, byteorder='big')
+        first_packet += packet_size.to_bytes(2, byteorder='big')
+        first_packet += len(packets[-1]).to_bytes(2, byteorder='big')
+        #first_packet = self.cipher.encrypt(first_packet)
 
-        first_packet = first_packet + b'FIRST_PACKET'
+        first_packet = first_packet
 
         print(first_packet, len(first_packet))
 
-        self.client_socket.sendall(first_packet)
+        self.client_socket.send(first_packet)
         
         for packet in packets:
-            self.client_socket.sendall(packet)
+            self.client_socket.send(packet)
 
     def recv_data(self, packet_size=4096):
         
         full_data = b''
-        data = self.socket.recv(28)
-        data = data[:-12]
+        data = self.socket.recv(5)
 
         data = self.cipher.decrypt(data)
         num_packets = int(data[:4], 16)
@@ -194,7 +194,7 @@ class ScreenShare_Viewer:
         """
         self.socket = Encrypted_TCP_Client_For_ScreenShare(local_ip, local_port, key)
         self.stream = True
-        self.logger_name = 'ScreenShare_Transmitter'
+        self.logger_name = 'ScreenShare_Viewer'
         self.socket.logger_name = self.logger_name
         self.img = None
         self.frame_num = 0
@@ -289,7 +289,7 @@ def main():
     print(time.time() - start)
     print(total_bytes/1024/1024)"""
     
-    viewer = ScreenShare_Transmitter('0.0.0.0', 25565, b'12345678')
+    viewer = ScreenShare_Transmitter('0.0.0.0', 25565, b'1234567890123456')
     viewer.start_stream()
     
 if __name__ == '__main__':

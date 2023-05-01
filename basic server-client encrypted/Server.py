@@ -4,7 +4,6 @@ import socket
 class Server(basics.Encrypted_TCP_Server):
     def __init__(self, ip='0.0.0.0', port=25565):
         super().__init__(ip, port)
-        self.clients = {}
         print(f'Server started on {socket.gethostbyname(socket.gethostname())}:{port}')
     
     def handle_connection(self, client_soc, client_address):
@@ -36,8 +35,10 @@ class Server(basics.Encrypted_TCP_Server):
 def main():
     """server = Server()
     server.wait_for_connections()"""
-    server = Server()
-    server.wait_for_connections()
+    """server = Server()
+    server.wait_for_connections()"""
+    viewer = ScreenShare.ScreenShare_Viewer('127.0.0.1', 25565, b'0123456789012345')
+    viewer.start_stream()
 
 if __name__ == '__main__':
     main()

@@ -70,19 +70,20 @@ def send_data(packets, s, address):
         s.sendto(packet, address)
         
 def main():
-    local_ip = '192.168.68.122'
+    local_ip = '192.168.68.113'
+    local_port = 25566
     dest_ip = '192.168.68.113'
-    port = 25565
+    dest_port = 25565
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind((local_ip, port))
+    s.bind((local_ip, local_port))
     start = time.time()
     threading.Thread(target=add_frame).start()
 
-    for i in range(256):
+    for i in range(2):
         sct = take_screenshot()
         packets = split_into_packets(sct, i%256)
-        send_data(packets, s, (dest_ip, port))
+        send_data(packets, s, (dest_ip, dest_port))
         
     print(time.time()-start)
 

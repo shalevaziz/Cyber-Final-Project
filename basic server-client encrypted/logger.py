@@ -59,11 +59,6 @@ def main():
     logger.log_critical('test2', 'sub sub')
     logger.log_error('test2', 'sub sub')
     logger.log_warning('test2', 'sub sub')
-
-       
+  
 if __name__ == "__main__":
     main()
-
-        
-
-
