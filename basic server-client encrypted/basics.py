@@ -18,7 +18,6 @@ import math
 from logger import Logger
 import uuid
 #import Fernet
-from cryptography.fernet import Fernet
 from Crypto.Cipher import DES
 logger = Logger(debugging_mode=True)
 
@@ -155,7 +154,7 @@ class Cipher_ECB:
         Returns:
             bytes: The encrypted message
         """
-        ciphertext = self.__cipher.encrypt(pad(msg, AES.block_size))
+        ciphertext = self.__cipher.encrypt(msg)
         return ciphertext
     
     def decrypt(self, msg):
@@ -167,11 +166,8 @@ class Cipher_ECB:
         Returns:
             bytes: The decrypted message
         """
-        decrypted = self.__cipher.decrypt(msg[:len(msg)-AES.block_size])
-        try:
-            decrypted += unpad(self.__cipher.decrypt(msg[-AES.block_size:]), AES.block_size)
-        except ValueError as e:
-            print(e)
+        decrypted = self.__cipher.decrypt(msg)
+        
         return decrypted
     
     def set_key(self, key):
