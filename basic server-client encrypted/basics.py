@@ -443,9 +443,16 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
     def handle_connection(self, client_soc, client_address):
         """This function handles the connection to the server.
         """
-        encrypted_communication = False
-        while not encrypted_communication:
-            encrypted_communication = self.initiate_encrypted_data_transfer(client_soc, client_address)
+        
+        
+        encrypted_communication = self.initiate_encrypted_data_transfer(client_soc, client_address)
+        
+        if not encrypted_communication:
+            client_soc.send(b'TERMINATE')
+            client_soc.close()
+            self.conns.pop(client_address)
+            return
+
         
         logger.log(f'Encrypted data transfer initiated with {client_address[0]}:{client_address[1]}', log_type='info', logger_name=self.logger_name)
         self.conns[client_address] = self.get_MAC(client_soc, client_address)
@@ -463,6 +470,9 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
 
             AES_key = client_soc.recv(4096)
             logger.log(f'Received encrypted key and iv from {client_address[0]}:{client_address[1]}', log_type='debug', logger_name=self.logger_name)
+            if AES_key == b'':
+                return False
+            
             AES_key = rsa.decrypt(AES_key, self.private_key)
             self.cipher = Cipher(AES_key)
             logger.log('created Cipher', log_type='debug', logger_name=self.logger_name)
