@@ -90,7 +90,98 @@ class Sender:
         for packet in packets:
             self.s.sendto(packet, (self.dest_ip, self.dest_port))
             time.sleep(0.001)
+
+
+class Receiver:
+    def __init__(self, local_ip, local_port, key):
+        self.local_ip = local_ip
+        self.local_port = local_port
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.s.bind((self.local_ip, self.local_port))
+        
+        self.cipher = Cipher_ECB(key)
+        self.lock = threading.Lock()
+        
+    def start_stream(self):
+        """This function starts the stream.
+        """
+        self.stream = True
+        self.data = b''
+        self.thread = threading.Thread(target=self.recv_frames)
+        self.thread.start()
+        self.show_screenshots()
+    
+    def recv_frame(self):
+        """This function receives packets from the server.
+
+        Args:
+            s (socket): The socket to receive data from.
+        """
+        packets = []
+
+        self.lock.acquire()
+        #s.sendto(b'1', ('192.168.68.113', 25566))
+        first, _ = self.s.recvfrom(PACKET_SIZE)
+        first = self.cipher.decrypt(first)
+        data_len = int.from_bytes(first[:3], 'big')
+        num_packets = int.from_bytes(first[3:5], 'big')
+        packets.append(first[5:])
+        
+        for i in range(num_packets-1):
+            packet, _ = self.s.recvfrom(PACKET_SIZE)
+            packet = self.cipher.decrypt(packet)
+            packets.append(packet[5:])
+            #print(i)
+        self.lock.release()
+
+        packets = sorted(packets, key=lambda x: int.from_bytes(x[:2], 'big'))
+        packets = [packet[2:] for packet in packets]
+        data = b''.join(packets)
+        data = data[:data_len]
+        
+        return data
+
+    def show_screenshots(self):
+        """This function shows the screenshot.
+        """
+                
+        state = 1
+        
+        while len(self.data) == 0:
+            pass
+        
+        while self.stream:
+            self.lock.acquire()
+            img = cv2.imdecode(np.frombuffer(self.data, np.uint8), cv2.IMREAD_COLOR)
+            try:
+                cv2.imshow('img', img)
+            except:
+                pass
+            self.lock.release()
             
+            try:
+                state = cv2.getWindowProperty('frame', 0)
+            except cv2.error as e:
+                state -= 1
+                print(state)
+                print(e)
+            
+            if state < 0:
+                self.stream = False
+                cv2.destroyAllWindows()
+                break
+            
+            cv2.waitKey(1)
+
+    def recv_frames(self):
+        """This function continuously receives frames from the server.
+
+        Args:
+            s (socket): The socket to receive data from.
+        """
+        while self.stream:
+            self.data = self.recv_frame()
+
 
 
 def main():
