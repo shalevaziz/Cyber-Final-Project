@@ -6,7 +6,7 @@ import threading
 import pyautogui
 import pickle
 from basics import Cipher_ECB
-import dxcam
+#import dxcam
 
 
 RESULUTIONS = (1536, 864)
@@ -90,7 +90,6 @@ class Sender:
         for packet in packets:
             self.s.sendto(packet, (self.dest_ip, self.dest_port))
             time.sleep(0.001)
-
 
 class Receiver:
     def __init__(self, local_ip, local_port, key):
@@ -182,10 +181,8 @@ class Receiver:
         while self.stream:
             self.data = self.recv_frame()
 
-
-
 def main():
-    sender = Sender('192.168.68.115', 25566, '192.168.68.132', 25565, b'1234567812345678')
+    sender = Receiver('0.0.0.0', 25566, b'1234567812345678')
     sender.start_stream()
 
 

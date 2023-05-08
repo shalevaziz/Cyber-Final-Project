@@ -404,7 +404,7 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
         logger.log('Sent MAC address', log_type='debug', logger_name=self.logger_name)
 
 class Encrypted_TCP_Server(Encrypted_TCP_Socket):
-    def __init__(self, ip = '0.0.0.0', port = 25565, DES_key = None, max_connections = 40):
+    def __init__(self, ip = '0.0.0.0', port = 25565, max_connections = 40):
         """This function initializes the socket and waits for a connection from a client.
 
         Args:
@@ -416,18 +416,9 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
         logger.create_logger(self.logger_name)
 
         super().__init__(ip, port)
-        if DES_key:
-            self.cipher = Cipher_DES(DES_key)
         self.socket.bind((ip, port))
         logger.log('Server started at ' + ip + ':' + str(port), log_type='info', logger_name=self.logger_name)
-        (self.public_key, self.private_key) = rsa.newkeys(1024)
     
-    def send_data(self, msg, client_socket):
-        return super().send_data(msg, socket = client_socket)
-
-    def recv_data(self, client_socket):
-        return super().recv_data(socket = client_socket)
-
     def wait_for_connections(self):
         """This function waits for a connection from a client.
         """
@@ -439,88 +430,10 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
             logger.log(f'Connection from {client_address[0]}:{client_address[1]}', log_type='info', logger_name=self.logger_name)
             self.conns[client_address] = None
             Thread(target=self.handle_connection, args=(client_soc, client_address)).start()
-        
-    def handle_connection(self, client_soc, client_address):
-        """This function handles the connection to the server.
-        """
-        
-        
-        encrypted_communication = self.initiate_encrypted_data_transfer(client_soc, client_address)
-        
-        if not encrypted_communication:
-            client_soc.send(b'TERMINATE')
-            client_soc.close()
-            self.conns.pop(client_address)
-            return
-
-        
-        logger.log(f'Encrypted data transfer initiated with {client_address[0]}:{client_address[1]}', log_type='info', logger_name=self.logger_name)
-        self.conns[client_address] = self.get_MAC(client_soc, client_address)
-
-
-    def initiate_encrypted_data_transfer(self, client_soc, client_address):
-        """This function initiates the encrypted data transfer.
-        """
-        logger.log(f'Initiating encrypted data transfer with {client_address[0]}:{client_address[1]}', log_type='info', logger_name=self.logger_name)
-        response = client_soc.recv(4096)
-        logger.log(f'Received: {response}', log_type='debug', logger_name=self.logger_name)
-        if response == b'INITIATE_ENCRYPTED_DATA_TRANSFER':
-            client_soc.send(self.public_key.save_pkcs1())
-            logger.log(f'Sent public key to {client_address[0]}:{client_address[1]}', log_type='debug', logger_name=self.logger_name)
-
-            AES_key = client_soc.recv(4096)
-            logger.log(f'Received encrypted key and iv from {client_address[0]}:{client_address[1]}', log_type='debug', logger_name=self.logger_name)
-            if AES_key == b'':
-                return False
-            
-            AES_key = rsa.decrypt(AES_key, self.private_key)
-            self.cipher = Cipher(AES_key)
-            logger.log('created Cipher', log_type='debug', logger_name=self.logger_name)
-            logger.log(f'Key: {self.cipher.get_key()}', log_type='debug', logger_name=self.logger_name)
-
-            self.send_data(b"ENCRYPTED_DATA_TRANSFER_INITIATED", client_soc)
-            logger.log(f'Sent ENCRYPTED_DATA_TRANSFER_INITIATED to {client_address[0]}:{client_address[1]}', log_type='debug', logger_name=self.logger_name)
-            return True
-        else:
-            logger.log(f'Encrypted data transfer failed to initiate with {client_address[0]}:{client_address[1]}.\ntrying again...', log_type='warning', logger_name=self.logger_name)
-            return self.initiate_encrypted_data_transfer(client_soc, client_address)
     
-    def get_MAC(self, client_soc, client_address):
-        """This function gets the MAC address of the client.
-
-        Args:
-            client_soc (socket): The socket of the client.
-
-        Returns:
-            string: The MAC address of the client.
-        """
-        self.send_data("GET_MAC", client_soc)
-        MAC = self.recv_data(client_soc).decode()
-        
-        if len(MAC.split(':')) == 6:
-            logger.log(f'Received MAC address from {client_address[0]}:{client_address[1]}', log_type='debug', logger_name=self.logger_name)
-            logger.log(f'MAC: {MAC}', log_type='debug', logger_name=self.logger_name)
-            return MAC
-        
-        else:
-            logger.log(f'Failed to get MAC address from {client_address[0]}:{client_address[1]}', log_type='warning', logger_name=self.logger_name)
-            return self.get_MAC(client_soc, client_address)
-
     
 def main():
-    cipher = DES.new(get_random_bytes(8), DES.MODE_ECB)
-    msg = b'01234567891234567'
-    msg = cipher.encrypt(pad(msg, DES.block_size))
-    #msg = msg[:1] + b'a' + msg[2:]
-    print(len(msg))
-    start = time.time()
-   
-
-    decrypted_msg = unpad(cipher.decrypt(msg), AES.block_size)
-    print(decrypted_msg)
-
-    
-    print(time.time() - start)
+    pass
 
 
 if __name__ == "__main__":

@@ -2,29 +2,36 @@ import tkinter as tk
 from tkinter import font, messagebox
 from PIL import Image, ImageTk
 import json
+from threading import Thread
 
 class Main_Window(tk.Tk):
-    def __init__(self):
+    def __init__(self, server):
         super().__init__()
         self.geometry("1200x800")
         self.title("First Setup")
         self.resizable(False, False)
+        
         self.frames = {}
         self.load_frames()
-        self.current_frame = 'main'
-        self.show_frame(self.current_frame)
+        
+        self.current_frame_name = 'main'
+        self.current_frame = self.frames[self.current_frame_name](self)
+        self.current_frame.pack(anchor='nw', fill='both', expand=True)
+        
+        self.server = server
+        
         self.mainloop()
     
     def load_frames(self):
-        self.frames['main'] = Main_Frame(self)
-        self.frames['edit'] = Edit_Frame(self)
+        self.frames['main'] = Main_Frame
+        self.frames['edit'] = Edit_Frame
     
     def show_frame(self, frame):
-        self.frames[self.current_frame].pack_forget()
-        self.frames[frame].pack(anchor='nw', fill='both', expand=True)
-        self.frames[frame].load_pcs()
-        self.current_frame = frame
-
+        self.current_frame.destroy()
+        self.current_frame_name = frame
+        self.current_frame = self.frames[self.current_frame_name](self)
+        self.current_frame.pack(anchor='nw', fill='both', expand=True)
+        self.current_frame.load_pcs()
 
 class Window(tk.Frame):
     def __init__(self, master=None):
@@ -37,9 +44,9 @@ class Window(tk.Frame):
         self.pcs = []
         super().__init__(master, width = 1200, height = 800)
         
-        PC_ICON_ONLINE = ImageTk.PhotoImage(Image.open(r"basic server-client encrypted/icons/pc_icon_online.png").resize((100, 100)))
-        PC_ICON_OFFLINE = ImageTk.PhotoImage(Image.open(r"basic server-client encrypted/icons/pc_icon_offline.png").resize((100, 100)))
-        X_ICON = ImageTk.PhotoImage(Image.open(r"basic server-client encrypted/icons/x_icon.png").resize((20, 20)))
+        PC_ICON_ONLINE = ImageTk.PhotoImage(Image.open(r"icons/pc_icon_online.png").resize((100, 100)))
+        PC_ICON_OFFLINE = ImageTk.PhotoImage(Image.open(r"icons/pc_icon_offline.png").resize((100, 100)))
+        X_ICON = ImageTk.PhotoImage(Image.open(r"icons/x_icon.png").resize((20, 20)))
         self.load_pcs()
     
     def load_pcs(self):
@@ -49,7 +56,7 @@ class Window(tk.Frame):
 
         self.pcs = []
 
-        with open('locations.json', 'r') as f:
+        with open('locations.json', 'r+') as f:
             self.pcs_pos = json.load(f)
         
         for pc in self.pcs_pos.items():
@@ -79,23 +86,30 @@ class Main_Frame(Window):
         pos = self.pcs_pos[mac]
         self.dropdown.place(x = pos[0]+10, y = pos[1]+130)
         self.dropdown.set_mac(mac)
+        self.dropdown.tkraise()
     
     def create_PCIcon(self, mac, pos = (0,0)):
-        PCIcon_View_Mode(self, mac, pos)
+        pc_icon = PCIcon_View_Mode(self, mac, pos)
         self.pcs_pos[mac] = pos
+        return pc_icon
 
 class Edit_Frame(Window):
     def __init__(self, master=None):
         super().__init__(master)
         self.create_done_button()
+        self.load_pcs()
+        
+        self.master.allow_new_connections = True
+        Thread(target=self.listen_for_new_connections).start()
     
     def create_done_button(self):
         self.done_button = tk.Button(self, text = 'Save', command = lambda: self.master.show_frame('main'))
         self.done_button.place(x = 1100, y = 700)
 
     def create_PCIcon(self, mac, pos = (0,0)):
-        PCIcon_Edit_Mode(self, mac, pos)
-        self.pcs_pos = {mac:pos}
+        pc_icon = PCIcon_Edit_Mode(self, mac, pos)
+        self.pcs_pos[mac] = pos
+        return pc_icon
     
     def change_location(self, mac, pos):
         self.pcs_pos[mac] = tuple(pos)
@@ -103,9 +117,15 @@ class Edit_Frame(Window):
             json.dump(self.pcs_pos, f)
 
     def remove_pc(self, mac):
-        self.pcs_pos.pop(mac)
         with open('locations.json', 'w') as f:
             json.dump(self.pcs_pos, f)
+    
+    def listen_for_new_connections(self):
+        while self.master.allow_new_connections:
+            while not self.master.server.new_connection:
+                pass
+            self.load_pcs()
+            self.master.server.new_connection = False
 
 class Basic_PCIcon(tk.Canvas):
     def __init__(self, master, mac, pos, online = True):
@@ -144,8 +164,6 @@ class PCIcon_Edit_Mode(Basic_PCIcon):
         self.delete_button.place(x = 110, y = 0)
         self.delete_button.bind("<Button-1>", lambda event: self.delete_pc())
 
-   
-
     def make_draggable(self):
         self.bind("<Button-1>", self.on_click)
         self.bind("<B1-Motion>", self.on_drag)
@@ -179,7 +197,7 @@ class PCIcon_View_Mode(Basic_PCIcon):
         x = self.winfo_x()
         y = self.winfo_y()
         self.master.assign_dropdown(self.mac)
-         
+
 class DropDownMenu(tk.Listbox):
     def __init__(self, master):
         text_font = font.Font(family = "Calibri", size = 13)
@@ -191,7 +209,11 @@ class DropDownMenu(tk.Listbox):
     
     def on_select(self, event):
         selection = self.curselection()
-        print(self.get(selection[0]))
+        selection = self.get(selection[0])
+        
+        if selection == "See Screen":
+            Thread(target=self.master.master.server.conns[self.mac].share_screen).start()
+            
     
     def set_mac(self, mac):
         self.mac = mac
@@ -199,4 +221,3 @@ class DropDownMenu(tk.Listbox):
     def get_mac(self):
         return self.mac
 
-main = Main_Window()
