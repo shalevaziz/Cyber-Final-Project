@@ -6,7 +6,7 @@ import threading
 import pyautogui
 import pickle
 from basics import Cipher_ECB
-import dxcam
+#import dxcam
 
 
 RESULUTIONS = (1536, 864)
@@ -47,7 +47,7 @@ class Sender:
         frame = np.array(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, RESULUTIONS, interpolation=cv2.INTER_AREA)"""
-        frame = self.cam.get_latest_frame()
+        frame = np.array(pyautogui.screenshot())
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, RESULUTIONS, interpolation=cv2.INTER_AREA)
         result, frame = cv2.imencode('.jpg', frame)
