@@ -418,16 +418,18 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
         super().__init__(ip, port)
         self.socket.bind((ip, port))
         logger.log('Server started at ' + ip + ':' + str(port), log_type='info', logger_name=self.logger_name)
+        ip = socket.gethostbyname(socket.gethostname())
+        print('Server started at ' + ip + ':' + str(port))
     
     def wait_for_connections(self):
         """This function waits for a connection from a client.
         """
         self.socket.listen()
         self.conns = {}
-        logger.log('Waiting for connections...', log_type='info', logger_name=self.logger_name)
+        print('Waiting for connections...')
         while True:
             client_soc, client_address = self.socket.accept()
-            logger.log(f'Connection from {client_address[0]}:{client_address[1]}', log_type='info', logger_name=self.logger_name)
+            print(f'Connection from {client_address[0]}:{client_address[1]}')
             self.conns[client_address] = None
             Thread(target=self.handle_connection, args=(client_soc, client_address)).start()
     

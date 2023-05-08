@@ -11,6 +11,7 @@ class Server(basics.Encrypted_TCP_Server):
     def __init__(self, ip='0.0.0.0', port=25565):
         super().__init__(ip, port)
         self.allow_new_connections = False
+        self.new_connection = False
 
     def get_allowed_pcs(self):
         with open('locations.json', 'r+') as f:
@@ -19,7 +20,9 @@ class Server(basics.Encrypted_TCP_Server):
     def handle_connection(self, client_soc, client_address):
         try:
             self.conns[client_address] = Client_Socket(self.ip, self.port, client_soc)
-            self.conns[client_address].handle_connection()
+            if not self.conns[client_address].handle_connection():
+                self.conns.pop(client_address)
+                return
             mac = self.conns[client_address].get_MAC()
             
             self.get_allowed_pcs()
@@ -38,13 +41,14 @@ class Server(basics.Encrypted_TCP_Server):
                     pcs[mac] = [0, 0]
                     json.dump(pcs, f)
 
-                self.new_connenction = True
+                self.new_connection = True
             else:
                 self.conns[client_address].terminate()
                 self.conns.pop(client_address)
                 print(f'Connection with {client_address} not allowed')
                 print(f'mac: {mac}')
                 print(f'allowed macs: {self.allowed_MACs}')
+                print(self.allow_new_connections)
         except ConnectionAbortedError:
             basics.logger.log(f'Connection with {client_address} aborted', self.logger_name)
             self.conns.pop(client_address)
@@ -64,12 +68,10 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         """This function handles the connection to the server.
         """
         encrypted_communication = self.initiate_encrypted_data_transfer()
-        
         if not encrypted_communication:
-            self.socket.send(b'TERMINATE')
-            self.socket.close()
-            self.conns.pop(self.client_addr)
-            return
+            self.terminate()
+            return False
+        return True
 
     def initiate_encrypted_data_transfer(self):
         """This function initiates the encrypted data transfer.
@@ -116,6 +118,7 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         return super().recv_data(self.socket)
     
     def share_screen(self):
+        self.send_data('SHARE_SCREEN')
         port = random.randint(49152, 65535)
         self.send_data(port.to_bytes(16, 'big'))
         

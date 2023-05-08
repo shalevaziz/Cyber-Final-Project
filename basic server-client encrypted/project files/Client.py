@@ -1,5 +1,5 @@
 import basics
-#import Freeze
+import Freeze
 import ScreenShare
 import socket
 import random
@@ -8,7 +8,7 @@ import random
 class Client(basics.Encrypted_TCP_Client):
     def __init__(self, ip='127.0.0.1', port=25565):
         super().__init__(ip, port)
-        #self.freezer = Freeze.Freezer()
+        self.freezer = Freeze.Freezer()
     
     def handle_connection(self):
         try:
@@ -17,10 +17,8 @@ class Client(basics.Encrypted_TCP_Client):
                 msg = self.recv_data().decode()
                 print(msg)
                 if msg == 'FREEZE':
-                    pass
                     self.freezer.freeze()
                 elif msg == 'UNFREEZE':
-                    pass
                     self.freezer.unfreeze()
                 elif msg == 'GET_MAC':
                     self.send_MAC()

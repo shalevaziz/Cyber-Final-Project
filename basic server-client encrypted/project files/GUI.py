@@ -3,7 +3,7 @@ from tkinter import font, messagebox
 from PIL import Image, ImageTk
 import json
 from threading import Thread
-
+import time
 class Main_Window(tk.Tk):
     def __init__(self, server):
         super().__init__()
@@ -14,11 +14,13 @@ class Main_Window(tk.Tk):
         self.frames = {}
         self.load_frames()
         
+        self.server = server
+
         self.current_frame_name = 'main'
         self.current_frame = self.frames[self.current_frame_name](self)
         self.current_frame.pack(anchor='nw', fill='both', expand=True)
         
-        self.server = server
+        
         
         self.mainloop()
     
@@ -66,11 +68,16 @@ class Window(tk.Frame):
         raise NotImplementedError('This function is not implemented in the base class')
 
 class Main_Frame(Window):
-    def __init__(self, master=None):
+    def __init__(self, master):
         super().__init__(master)
         self.create_widgets()
+
+        self.master.server.allow_new_connections = False
+
         self.bind('<Button-1>', lambda event: self.dropdown.place_forget())
 
+        
+    
     def create_widgets(self):
         self.create_dropdown()
         self.create_edit_button()
@@ -99,7 +106,7 @@ class Edit_Frame(Window):
         self.create_done_button()
         self.load_pcs()
         
-        self.master.allow_new_connections = True
+        self.master.server.allow_new_connections = True
         Thread(target=self.listen_for_new_connections).start()
     
     def create_done_button(self):
@@ -117,13 +124,14 @@ class Edit_Frame(Window):
             json.dump(self.pcs_pos, f)
 
     def remove_pc(self, mac):
+        self.pcs_pos.pop(mac)
         with open('locations.json', 'w') as f:
             json.dump(self.pcs_pos, f)
     
     def listen_for_new_connections(self):
-        while self.master.allow_new_connections:
+        while self.master.server.allow_new_connections:
             while not self.master.server.new_connection:
-                pass
+                time.sleep(3)
             self.load_pcs()
             self.master.server.new_connection = False
 

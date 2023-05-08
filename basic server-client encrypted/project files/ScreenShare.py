@@ -6,7 +6,7 @@ import threading
 import pyautogui
 import pickle
 from basics import Cipher_ECB
-#import dxcam
+import dxcam
 
 
 RESULUTIONS = (1536, 864)
