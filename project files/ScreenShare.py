@@ -91,15 +91,7 @@ class Sender:
             self.s.sendto(packet, (self.dest_ip, self.dest_port))
             time.sleep(0.001)
 
-class Multi_Sender(Sender):
-    def __init__(self, local_ip, local_port, dest_ips = [], dest_ports = [], keys = []):
-        self.local_ip = local_ip
-        self.local_port = local_port
-        self.dest_ips = dest_ips
-        self.dest_ports = dest_ports
-        self.keys = keys
-        
-        self.sockets = []
+
     
 class Receiver:
     def __init__(self, local_ip, local_port, key):
@@ -197,8 +189,13 @@ class Receiver:
             self.data = self.recv_frame()
 
 def main():
-    sender = Receiver('0.0.0.0', 25566, b'1234567812345678')
-    sender.start_stream()
+    """sender = Receiver('0.0.0.0', 25566, b'1234567812345678')
+    sender.start_stream()"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    s.bind(('0.0.0.0', 25565))
+    msg, addr = s.recvfrom(1024)
+    print(msg)
 
 
 if __name__ == '__main__':
