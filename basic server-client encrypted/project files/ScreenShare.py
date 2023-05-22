@@ -25,8 +25,8 @@ class Sender:
         self.stream = True
 
         self.frames = []
-        self.cam = dxcam.create()
-        self.cam.start(target_fps = 24)
+        """self.cam = dxcam.create()
+        self.cam.start(target_fps = 24)"""
 
         self.key = key
         self.cipher = Cipher_ECB(self.key)
@@ -91,6 +91,16 @@ class Sender:
             self.s.sendto(packet, (self.dest_ip, self.dest_port))
             time.sleep(0.001)
 
+class Multi_Sender(Sender):
+    def __init__(self, local_ip, local_port, dest_ips = [], dest_ports = [], keys = []):
+        self.local_ip = local_ip
+        self.local_port = local_port
+        self.dest_ips = dest_ips
+        self.dest_ports = dest_ports
+        self.keys = keys
+        
+        self.sockets = []
+    
 class Receiver:
     def __init__(self, local_ip, local_port, key):
         self.local_ip = local_ip

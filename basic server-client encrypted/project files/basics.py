@@ -359,12 +359,30 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
         super().__init__(ip, port)
         if DES_key:
             self.cipher = Cipher_DES(DES_key)
-        self.socket.connect((ip, port))
-        logger.log('Connected to server at ' + ip + ':' + str(port), log_type='info', logger_name=self.logger_name)
+
+        
 
     def handle_connection(self):
         """This function handles the connection to the server.
         """
+        self.socket.settimeout(5)
+        self.connected = False
+        while not self.connected:
+            try:
+                self.socket.connect((self.ip, self.port))
+                self.connected = True
+                print('Connected to server at ' + self.server_ip + ':' + str(self.server_port))
+            except socket.timeout:
+                print('Connection timed out\nTrying again...')
+                self.socket.close()
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            except ConnectionRefusedError:
+                print('Connection refused\nTrying again...')
+            except OSError:
+                print('Host unreachable\nTrying again...')
+            
+            time.sleep(10)
+                
         self.initiate_encrypted_data_transfer()
 
     def initiate_encrypted_data_transfer(self):
@@ -414,6 +432,8 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
         global logger
         self.logger_name = 'TCP Server'
         logger.create_logger(self.logger_name)
+        self.conns = {}
+        
 
         super().__init__(ip, port)
         self.socket.bind((ip, port))
@@ -425,7 +445,6 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
         """This function waits for a connection from a client.
         """
         self.socket.listen()
-        self.conns = {}
         print('Waiting for connections...')
         while True:
             client_soc, client_address = self.socket.accept()

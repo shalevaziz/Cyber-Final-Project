@@ -43,30 +43,39 @@ class Window(tk.Frame):
         self.master.title("First Setup")
         self.master.resizable(False, False)
         self.pcs_pos = {}
-        self.pcs = []
+        self.pcs = {}
         super().__init__(master, width = 1200, height = 800)
         
         PC_ICON_ONLINE = ImageTk.PhotoImage(Image.open(r"icons/pc_icon_online.png").resize((100, 100)))
         PC_ICON_OFFLINE = ImageTk.PhotoImage(Image.open(r"icons/pc_icon_offline.png").resize((100, 100)))
         X_ICON = ImageTk.PhotoImage(Image.open(r"icons/x_icon.png").resize((20, 20)))
-        self.load_pcs()
+        
+        Thread(target=self.update_icons).start()
     
     def load_pcs(self):
-        for pc in self.pcs:
+        for pc in self.pcs.values():
             if pc is not None:
                 pc.destroy()
 
-        self.pcs = []
-
+        self.pcs = {}
+        connected_pcs = self.master.server.conns.keys()
         with open('locations.json', 'r+') as f:
             self.pcs_pos = json.load(f)
         
         for pc in self.pcs_pos.items():
-            self.pcs.append(self.create_PCIcon(pc[0], pc[1]))
+            self.pcs[pc[0]] = self.create_PCIcon(pc[0], pc[1], pc[0] in connected_pcs)
     
-    def create_PCIcon(self, mac, pos = (0,0)):
+    def create_PCIcon(self, mac, pos = (0,0), online = True):
         raise NotImplementedError('This function is not implemented in the base class')
 
+    def update_icons(self):
+        while self.winfo_exists():
+            self.load_pcs()
+            self.master.server.new_connection = False
+            while not self.master.server.new_connection and self.winfo_exists():
+                time.sleep(2)
+            
+            
 class Main_Frame(Window):
     def __init__(self, master):
         super().__init__(master)
@@ -76,27 +85,27 @@ class Main_Frame(Window):
 
         self.bind('<Button-1>', lambda event: self.dropdown.place_forget())
 
-        
-    
     def create_widgets(self):
-        self.create_dropdown()
         self.create_edit_button()
 
-    def create_dropdown(self):
-        self.dropdown = DropDownMenu(self)
+    def create_dropdown(self, mac):
+        self.dropdown = DropDownMenu(self, mac)
 
     def create_edit_button(self):
         self.edit_button = tk.Button(self, text = 'Edit', command = lambda: self.master.show_frame('edit'))
         self.edit_button.place(x = 1100, y = 700)
 
     def assign_dropdown(self, mac):
+        if not self.pcs[mac].online:
+            return
+        self.create_dropdown(mac)
         pos = self.pcs_pos[mac]
         self.dropdown.place(x = pos[0]+10, y = pos[1]+130)
         self.dropdown.set_mac(mac)
         self.dropdown.tkraise()
     
-    def create_PCIcon(self, mac, pos = (0,0)):
-        pc_icon = PCIcon_View_Mode(self, mac, pos)
+    def create_PCIcon(self, mac, pos = (0,0), online = True):
+        pc_icon = PCIcon_View_Mode(self, mac, pos, online)
         self.pcs_pos[mac] = pos
         return pc_icon
 
@@ -107,14 +116,13 @@ class Edit_Frame(Window):
         self.load_pcs()
         
         self.master.server.allow_new_connections = True
-        Thread(target=self.listen_for_new_connections).start()
     
     def create_done_button(self):
         self.done_button = tk.Button(self, text = 'Save', command = lambda: self.master.show_frame('main'))
         self.done_button.place(x = 1100, y = 700)
 
-    def create_PCIcon(self, mac, pos = (0,0)):
-        pc_icon = PCIcon_Edit_Mode(self, mac, pos)
+    def create_PCIcon(self, mac, pos = (0,0), online = True):
+        pc_icon = PCIcon_Edit_Mode(self, mac, pos, online)
         self.pcs_pos[mac] = pos
         return pc_icon
     
@@ -127,13 +135,6 @@ class Edit_Frame(Window):
         self.pcs_pos.pop(mac)
         with open('locations.json', 'w') as f:
             json.dump(self.pcs_pos, f)
-    
-    def listen_for_new_connections(self):
-        while self.master.server.allow_new_connections:
-            while not self.master.server.new_connection:
-                time.sleep(3)
-            self.load_pcs()
-            self.master.server.new_connection = False
 
 class Basic_PCIcon(tk.Canvas):
     def __init__(self, master, mac, pos, online = True):
@@ -148,7 +149,6 @@ class Basic_PCIcon(tk.Canvas):
         self.create_label()
         self.change_icon()
 
-        
     def create_label(self):
         self.label = tk.Label(self, text = self.mac)
         self.label.place(x = 0, y = 110)
@@ -207,23 +207,44 @@ class PCIcon_View_Mode(Basic_PCIcon):
         self.master.assign_dropdown(self.mac)
 
 class DropDownMenu(tk.Listbox):
-    def __init__(self, master):
+    def __init__(self, master, mac):
         text_font = font.Font(family = "Calibri", size = 13)
         super().__init__(master, width = 11, height = 3, selectmode = tk.SINGLE, font=text_font)
-        self.mac = None
-        self.insert(0,"See Screen")
-        self.insert(1,"Delete")
+        self.mac = mac
+
+        self.is_frozen = self.master.master.server.conns[self.mac].is_frozen
+        
+        self.add_options()
+    
         self.bind("<<ListboxSelect>>", self.on_select)
+
+    
+    def add_options(self):
+        self.insert(0,"See Screen")
+        if self.is_frozen:
+            self.insert(1,"Unfreeze")
+        else:
+            self.insert(1,"Freeze")
     
     def on_select(self, event):
-        selection = self.curselection()
-        selection = self.get(selection[0])
+        selection = self.curselection()[0]
         
-        if selection == "See Screen":
+        
+        if selection == 0:#See Screen
             Thread(target=self.master.master.server.conns[self.mac].share_screen).start()
             
+        elif selection == 1:#Freeze/Unfreeze
+            if self.is_frozen:
+                self.master.master.server.conns[self.mac].unfreeze()
+                self.is_frozen = False
+                self.delete(1)
+                self.insert(1,"Freeze")
+            else:
+                self.master.master.server.conns[self.mac].freeze()
+                self.is_frozen = True
+                self.delete(1)
+                self.insert(1,"Unfreeze")
     
-    def set_mac(self, mac):
         self.mac = mac
     
     def get_mac(self):

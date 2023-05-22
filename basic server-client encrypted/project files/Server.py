@@ -6,12 +6,13 @@ import GUI
 from threading import Thread
 import rsa
 import json
-
+import time
 class Server(basics.Encrypted_TCP_Server):
     def __init__(self, ip='0.0.0.0', port=25565):
         super().__init__(ip, port)
         self.allow_new_connections = False
         self.new_connection = False
+        Thread(target=self.ping_all).start()
 
     def get_allowed_pcs(self):
         with open('locations.json', 'r+') as f:
@@ -31,6 +32,7 @@ class Server(basics.Encrypted_TCP_Server):
                 self.conns[mac] = self.conns.pop(client_address)
                 print(f'Connection with {client_address} established')
                 print(f'mac: {mac}')
+                self.new_connection = True
             elif self.allow_new_connections:
                 self.conns[mac] = self.conns.pop(client_address)
                 
@@ -56,14 +58,39 @@ class Server(basics.Encrypted_TCP_Server):
             basics.logger.log(f'Connection with {client_address} reset', self.logger_name)
             self.conns.pop(client_address)
     
+    def ping_all(self):
+        while True:
+            for mac in self.conns.keys():
+                Thread(target=self.ping_one, args=(mac,)).start()
+            time.sleep(5)
+    
+    def ping_one(self, mac):
+        if self.conns[mac] is None:
+            return
+        try:
+            alive = self.conns[mac].ping()
+        except ValueError:
+            alive = False
+            print('ValueError')
+        if not alive:
+            print(f'{mac} is not alive')
+            self.conns.pop(mac)
+        return alive
+
+    def add_app(self, path):
+        failed = []
+        for client in self.conns.items():
+            if not client[1].add_app(path):
+                failed.append(client[0])
+        return failed
 class Client_Socket(basics.Encrypted_TCP_Socket):
     def __init__(self, ip, port, client_soc):
         super().__init__(ip, port)
         self.socket = client_soc
         self.client_addr = self.socket.getpeername()
         (self.public_key, self.private_key) = rsa.newkeys(1024)
+        self.is_frozen = False
         
-    
     def handle_connection(self):
         """This function handles the connection to the server.
         """
@@ -127,14 +154,34 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
     
     def freeze(self):
         self.send_data('FREEZE')
+        self.is_frozen = True
     
     def unfreeze(self):
         self.send_data('UNFREEZE')
+        self.is_frozen = False
     
     def terminate(self):
         self.send_data('TERMINATE')
         self.socket.close()
-        
+    
+    def ping(self):
+        self.socket.settimeout(5)
+        self.send_data('PING')
+        response = self.recv_data()
+        return response == b'PONG'
+    
+    def open_URL(self, URL):
+        self.send_data('OPEN_URL')
+        self.send_data(URL.encode())
+    
+    def open_App(self, app):
+        self.send_data('OPEN_APP')
+        self.send_data(app.encode())
+    
+    def add_app(self, path):
+        self.send_data('ADD_APP')
+        self.send_data(path.encode())
+
 def main():
     server = Server()
     Thread(target=server.wait_for_connections).start()
