@@ -199,4 +199,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    cv2.namedWindow('frame', cv2.WND_PROP_FULLSCREEN)
+    cv2.setWindowProperty('frame', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    key = cv2.waitKey(1)
+    time.sleep(10)
+    
+    #main()
