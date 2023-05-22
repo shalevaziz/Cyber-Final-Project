@@ -373,7 +373,8 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
             try:
                 self.socket.connect((self.ip, self.port))
                 self.connected = True
-                print('Connected to server at ' + self.server_ip + ':' + str(self.server_port))
+                print('Connected to server at ' + self.ip + ':' + str(self.port))
+                break
             except socket.timeout:
                 print('Connection timed out\nTrying again...')
                 self.socket.close()
