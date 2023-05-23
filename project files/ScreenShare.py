@@ -68,25 +68,29 @@ class Sender:
         frame = cv2.resize(frame, RESOLUTIONS, interpolation=cv2.INTER_AREA)
         return frame.tobytes()
 
-    def split_into_packets(self, data: bytes):
-        """A function that splits the data into packets.
+    def split_into_packets(self, data):
+        """This function splits the data into packets.
 
         Args:
             data (bytes): The data to split.
 
         Returns:
-            list: A list of packets.
+            list: The list of packets.
         """
-        packets = []
-        data_len = len(data)
-        num_packets = data_len // PACKET_SIZE + 1
+        data = data + b'0'*(PACKET_SIZE - len(data) % PACKET_SIZE)
+        data_size_in_packet = PACKET_SIZE - HEADER_SIZE
+        packets = [data[i:i+data_size_in_packet] for i in range(0, len(data)-data_size_in_packet, data_size_in_packet)]
+        num_of_packets = len(packets).to_bytes(2, 'big')
+        len_data = len(data).to_bytes(3, 'big')
 
-        for i in range(num_packets):
-            packet = data[i * PACKET_SIZE:(i + 1) * PACKET_SIZE]
-            packet_len = len(packet)
-            packet_header = bytes([i, num_packets, packet_len])
-            packet = packet_header + packet
-            packets.append(packet)
+        for i in range(len(packets)):
+            packets[i] = len_data + num_of_packets + i.to_bytes(2, 'big') + packets[i]
+            packets[i] = self.cipher.encrypt(packets[i])
+        #print(len(packets[0]), len(packets))
+        """first = str(hex(len(packets))).zfill(4).encode()
+        packets.insert(0, first)"""
+        
+        packets = packets[::-1]
 
         return packets
 
