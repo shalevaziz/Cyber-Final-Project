@@ -240,18 +240,16 @@ class Receiver:
         while self.stream:
             self.data = self.recv_frame()
 
-def main():
-    """sender = Receiver('0.0.0.0', 25566, b'1234567812345678')
-    sender.start_stream()"""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    s.bind(('0.0.0.0', 25565))
-    msg, addr = s.recvfrom(1024)
-    print(msg)
+import unittest
+import threading
+import time
+from ScreenShare import MultiSender
 
+def main():
+    recv = Receiver('10.99.101.57', 25565, b'1234567890123456')
+    send = MultiSender(25566, 25565, b'1234567890123456')
+    threading.Thread(target=recv.start_stream).start()
+    threading.Thread(target=send.start_stream).start()
 
 if __name__ == '__main__':
-    
-    key: int = cv2.waitKey(1)
-    time.sleep(1)
     main()
