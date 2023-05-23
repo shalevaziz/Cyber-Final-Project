@@ -12,7 +12,7 @@ HEADER_SIZE: int = 7
 
 
 class Sender:
-    def __init__(self, local_ip, local_port, dest_ip, dest_port, key):
+    def __init__(self, local_ip: str, local_port: int, dest_ip: str, dest_port: int, key: bytes):
         self.local_ip = local_ip
         self.local_port = local_port
         self.dest_ip = dest_ip
@@ -23,8 +23,6 @@ class Sender:
         self.stream = True
 
         self.frames = []
-        """self.cam = dxcam.create()
-        self.cam.start(target_fps = 24)"""
 
         self.key = key
         self.cipher = Cipher_ECB(self.key)
@@ -48,18 +46,18 @@ class Sender:
         Returns:
             bytes: The screenshot of the screen.
         """
-        """frame = pyautogui.screenshot()
+        frame = pyautogui.screenshot()
         frame = np.array(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = cv2.resize(frame, RESULUTIONS, interpolation=cv2.INTER_AREA)"""
+        frame = cv2.resize(frame, RESOLUTIONS, interpolation=cv2.INTER_AREA)
         frame = np.array(pyautogui.screenshot())
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = cv2.resize(frame, RESULUTIONS, interpolation=cv2.INTER_AREA)
+        frame = cv2.resize(frame, RESOLUTIONS, interpolation=cv2.INTER_AREA)
         result, frame = cv2.imencode('.jpg', frame)
         frame = frame.tobytes()
         return frame
 
-    def split_into_packets(self, data):
+    def split_into_packets(self, data: bytes):
         """This function splits the data into packets.
 
         Args:
@@ -77,19 +75,16 @@ class Sender:
         for i in range(len(packets)):
             packets[i] = len_data + num_of_packets + i.to_bytes(2, 'big') + packets[i]
             packets[i] = self.cipher.encrypt(packets[i])
-        #print(len(packets[0]), len(packets))
-        """first = str(hex(len(packets))).zfill(4).encode()
-        packets.insert(0, first)"""
-        
+
         packets = packets[::-1]
 
         return packets
 
-    def send_data(self, packets):
+    def send_data(self, packets: list[bytes]):
         """This function sends data to the client
 
         Args:
-            data (bytes): The data to send.
+            packets (list[bytes]): The data to send.
         """
 
         for packet in packets:
@@ -112,7 +107,7 @@ class MultiSender(Sender):
         """A function that sends the packets to the remote destinations.
 
         Args:
-            packets (list): A list of packets to send.
+            packets (list[bytes]): A list of packets to send.
         """
         for packet in packets:
             self.s.sendto(self.cipher.encrypt(packet), (self.dest_ip, self.dest_port))
@@ -123,7 +118,7 @@ class MultiSender(Sender):
         self.stream = False
         self.s.sendto(self.cipher.encrypt(b'STOP000000000000'), (self.dest_ip, self.dest_port))
 class Receiver:
-    def __init__(self, local_ip, local_port, key):
+    def __init__(self, local_ip: str, local_port: int, key: bytes):
         self.local_ip = local_ip
         self.local_port = local_port
         self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -212,16 +207,23 @@ class Receiver:
         while self.stream:
             self.data = self.recv_frame()
 
-import unittest
-import threading
-import time
-from ScreenShare import MultiSender
 
 def main():
-    recv = Receiver('10.99.101.57', 25565, b'1234567890123456')
-    send = MultiSender(25566, 25565, b'1234567890123456')
-    threading.Thread(target=recv.start_stream).start()
+    send = Sender(
+        local_ip='127.0.0.1',
+        local_port=5000,
+        dest_ip='127.0.0.1',
+        dest_port=5001,
+        key=b'1234567890123456'
+    )
+    recv = Receiver(
+        local_ip='127.0.0.1',
+        local_port=5001,
+        key=b'1234567890123456'
+    )
     threading.Thread(target=send.start_stream).start()
+    recv.start_stream()
+    
 
 if __name__ == '__main__':
     main()
