@@ -103,6 +103,13 @@ class MultiSender(Sender):
         super().__init__('0.0.0.0', local_port, '255.255.255.255', dest_port, key)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
+    def start_stream(self):
+        while self.stream:
+            frame = self.take_screenshot()
+            packets = self.split_into_packets(frame)
+            self.send_data(packets)
+        print('stopped')
+    
     def stop(self):
         """A function that stops the stream.
         """
@@ -212,13 +219,7 @@ class Receiver:
 
 
 def main():
-    send = Sender(
-        local_ip='192.168.68.121',
-        local_port=25566,
-        dest_ip='192.168.68.115',
-        dest_port=25565,
-        key=b'1234567890123456'
-    )
+    send = MultiSender(25565, 25565, b'1234567890123456')
     send.start_stream()
     
 
