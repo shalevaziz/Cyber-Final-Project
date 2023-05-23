@@ -103,22 +103,13 @@ class MultiSender(Sender):
         super().__init__('0.0.0.0', local_port, '255.255.255.255', dest_port, key)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-    def send_data(self, packets: list[bytes]):
-        """A function that sends the packets to the remote destinations.
-
-        Args:
-            packets (list[bytes]): A list of packets to send.
-        """
-        for packet in packets:
-            self.s.sendto(self.cipher.encrypt(packet), (self.dest_ip, self.dest_port))
-    
     def stop(self):
         """A function that stops the stream.
         """
         self.stream = False
         self.s.sendto(self.cipher.encrypt(b'STOP000000000000'), (self.dest_ip, self.dest_port))
 class Receiver:
-    def __init__(self, local_ip: str, local_port: int, key: bytes):
+    def __init__(self, local_ip: str, local_port: int, key: bytes, student_mode: bool = False):
         self.local_ip = local_ip
         self.local_port = local_port
         self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -127,10 +118,19 @@ class Receiver:
         self.cipher = Cipher_ECB(key)
         self.lock = threading.Lock()
         
+        self.student_mode = student_mode
+    
+    def stop(self):
+        """This function stops the stream.
+        """
+        self.stream = False
+        
+    
     def start_stream(self):
         """This function starts the stream.
         """
         self.stream = True
+        
         self.data = b''
         self.thread = threading.Thread(target=self.recv_frames)
         self.thread.start()
@@ -145,7 +145,6 @@ class Receiver:
         packets = []
 
         self.lock.acquire()
-        #s.sendto(b'1', ('192.168.68.113', 25566))
         first, _ = self.s.recvfrom(PACKET_SIZE)
         first = self.cipher.decrypt(first)
         data_len = int.from_bytes(first[:3], 'big')
@@ -156,7 +155,6 @@ class Receiver:
             packet, _ = self.s.recvfrom(PACKET_SIZE)
             packet = self.cipher.decrypt(packet)
             packets.append(packet[5:])
-            #print(i)
         self.lock.release()
 
         packets = sorted(packets, key=lambda x: int.from_bytes(x[:2], 'big'))
@@ -171,25 +169,30 @@ class Receiver:
         """
                 
         state = 1
-        
+        screen_name = 'Teacher\'s Screen' if self.student_mode else 'Student\'s Screen'
         while len(self.data) == 0:
             pass
+        
+        if self.student_mode:
+            cv2.namedWindow(screen_name, cv2.WINDOW_NORMAL)
+            cv2.setWindowProperty(screen_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         
         while self.stream:
             self.lock.acquire()
             img = cv2.imdecode(np.frombuffer(self.data, np.uint8), cv2.IMREAD_COLOR)
             try:
-                cv2.imshow('img', img)
+                cv2.imshow(screen_name, img)
             except:
                 pass
             self.lock.release()
             
-            try:
-                state = cv2.getWindowProperty('frame', 0)
-            except cv2.error as e:
-                state -= 1
-                print(state)
-                print(e)
+            if not self.student_mode:
+                try:
+                    state = cv2.getWindowProperty(screen_name, 0)
+                except cv2.error as e:
+                    state -= 1
+                    print(state)
+                    print(e)
             
             if state < 0:
                 self.stream = False
@@ -210,19 +213,13 @@ class Receiver:
 
 def main():
     send = Sender(
-        local_ip='127.0.0.1',
-        local_port=5000,
-        dest_ip='127.0.0.1',
-        dest_port=5001,
+        local_ip='192.168.68.121',
+        local_port=25566,
+        dest_ip='192.168.68.115',
+        dest_port=25565,
         key=b'1234567890123456'
     )
-    recv = Receiver(
-        local_ip='127.0.0.1',
-        local_port=5001,
-        key=b'1234567890123456'
-    )
-    threading.Thread(target=send.start_stream).start()
-    recv.start_stream()
+    send.start_stream()
     
 
 if __name__ == '__main__':
