@@ -44,6 +44,7 @@ class Client(basics.Encrypted_TCP_Client):
                 elif msg == 'ADD_APP':
                     self.add_app(self.recv_data().decode())
                 elif msg == 'RECV_FILE':
+                    self.recv_file()
                     
                 
         except ConnectionAbortedError:
