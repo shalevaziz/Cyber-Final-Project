@@ -131,7 +131,8 @@ class Main_Frame(Window):
     
     def send_file(self):
         file_path = filedialog.askopenfilename()
-        print(file_path)
+        if file_path == '':
+            return
         self.master.server.send_file_to_all(file_path)
 
 class Edit_Frame(Window):

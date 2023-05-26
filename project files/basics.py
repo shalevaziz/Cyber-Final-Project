@@ -22,6 +22,7 @@ from Crypto.Cipher import DES
 logger = Logger(debugging_mode=True)
 
 class Useful_Functions:
+    @staticmethod
     def split_data(encrypted_msg, packet_size=4096):
         """This function splits the encrypted message into packets of 4096 bytes.
         It also adds a b'END' packet at the end.
@@ -43,6 +44,7 @@ class Useful_Functions:
 
         return packets
     
+    @staticmethod
     def get_MAC_address():
         """This function returns the MAC address of the computer
 
@@ -52,7 +54,8 @@ class Useful_Functions:
         mac = hex(uuid.getnode()).replace('0x', '').upper()
         return ':'.join([mac[i: i + 2] for i in range(0, 11, 2)])
 
-    def read_file(file_path, chunk_size=4096):
+    @staticmethod
+    def read_file(file_path: str, chunk_size=4096):
         """This function reads a file and returns its contents
 
         Args:
@@ -67,7 +70,7 @@ class Useful_Functions:
                 if not data:
                     break
                 yield data
-        raise StopIteration("Finished reading file")
+        yield b'EOF'
 class Cipher:
     """This class is used to encrypt and decrypt messages using AES-EAX mode.
     It also authenticates the messages using HMAC.
@@ -304,12 +307,11 @@ class Encrypted_TCP_Socket:
         self.send_data(filename)
         try:
             for buffer in file_gen:
+                
                 buffer = self.cipher.encrypt(buffer)
                 self.socket.send(buffer)
         except StopIteration:
-            msg = b'EOF'
-            msg = self.cipher.encrypt(msg)
-            self.socket.send(msg)
+            print('sent eof')
         
     def recv_file(self, path):
         filename = self.recv_data()
@@ -495,7 +497,6 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
         while True:
             client_soc, client_address = self.socket.accept()
             print(f'Connection from {client_address[0]}:{client_address[1]}')
-            self.conns[client_address] = None
             Thread(target=self.handle_connection, args=(client_soc, client_address)).start()
 
 def main():

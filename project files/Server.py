@@ -115,6 +115,7 @@ class Server(basics.Encrypted_TCP_Server):
         self.streaming_screen = False
     
     def send_file_to_all(self, path):
+        print(self.conns)
         for conn in self.conns.values():
             Thread(target=conn.send_file, args=(path,)).start()
 
@@ -200,7 +201,7 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         self.socket.close()
     
     def ping(self):
-        self.socket.settimeout(5)
+        self.socket.settimeout(3)
         try:
             self.send_data('PING')
             response = self.recv_data()
@@ -224,6 +225,9 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         self.send_data('VIEW_TEACHER_SCREEN')
         self.send_data(b''.join([key, port.to_bytes(16, 'big')]))
     
+    def send_file(self, path):
+        self.send_data('RECV_FILE')
+        return super().send_file(path)
             
 
 def main():
