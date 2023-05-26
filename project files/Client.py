@@ -20,7 +20,7 @@ class Client(basics.Encrypted_TCP_Client):
             super().handle_connection()
             while True:
                 msg = self.recv_data().decode()
-                print(msg)
+                print(msg if msg != "PING" else "")
                 if msg == 'FREEZE':
                     self.freezer.freeze()
                 elif msg == 'UNFREEZE':
@@ -87,13 +87,17 @@ class Client(basics.Encrypted_TCP_Client):
         reciever = ScreenShare.Receiver('0.0.0.0', port, key, student_mode=True)
         threading.Thread(target=reciever.start_stream).start()
 
+    def recv_file(self, path):
+        super().recv_file(path)
+        os.startfile(path)
+
    
         
         
 
 
 def main():
-    client = Client('192.168.68.115', 25565)
+    client = Client('192.168.68.121', 25565)
     client.handle_connection()
     
     

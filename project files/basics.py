@@ -19,6 +19,7 @@ from logger import Logger
 import uuid
 #import Fernet
 from Crypto.Cipher import DES
+import os
 logger = Logger(debugging_mode=True)
 
 class Useful_Functions:
@@ -314,15 +315,17 @@ class Encrypted_TCP_Socket:
             print('sent eof')
         
     def recv_file(self, path):
-        filename = self.recv_data()
-        
-        with open(path + filename, 'wb') as file:
+        filename = self.recv_data().decode()
+        path = os.path.join(path, filename)
+        print(path)
+        with open(path, 'wb') as file:
             while True:
                 data = self.socket.recv(4096)
                 data = self.decrypt_data(data)
                 if data == b'EOF':
                     break
                 file.write(data)
+                print(data)
 
 class Encrypted_UDP_Socket:
     def __init__(self, local_ip, local_port, dest_ip, dest_port, key):
