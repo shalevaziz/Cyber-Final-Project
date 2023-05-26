@@ -7,12 +7,19 @@ from threading import Thread
 import rsa
 import json
 import time
+from Crypto.Random import get_random_bytes
+BROADCAST_PORT = 25566
+
 class Server(basics.Encrypted_TCP_Server):
     def __init__(self, ip='0.0.0.0', port=25565):
         super().__init__(ip, port)
         self.allow_new_connections = False
         self.new_connection = False
-        #Thread(target=self.ping_all).start()
+        self.temp_conns = {}
+        
+        self.streaming_screen = False
+        
+        Thread(target=self.ping_all).start()
 
     def get_allowed_pcs(self):
         with open('locations.json', 'r+') as f:
@@ -20,22 +27,22 @@ class Server(basics.Encrypted_TCP_Server):
     
     def handle_connection(self, client_soc, client_address):
         try:
-            self.conns[client_address] = Client_Socket(self.ip, self.port, client_soc)
-            if not self.conns[client_address].handle_connection():
-                self.conns.pop(client_address)
+            self.temp_conns[client_address] = Client_Socket(self.ip, self.port, client_soc)
+            if not self.temp_conns[client_address].handle_connection():
+                self.temp_conns.pop(client_address)
                 return
-            mac = self.conns[client_address].get_MAC()
+            mac = self.temp_conns[client_address].get_MAC()
             print(mac)
             
             self.get_allowed_pcs()
             
             if mac in self.allowed_MACs:
-                self.conns[mac] = self.conns.pop(client_address)
+                self.conns[mac] = self.temp_conns.pop(client_address)
                 print(f'Connection with {client_address} established')
                 print(f'mac: {mac}')
                 self.new_connection = True
             elif self.allow_new_connections:
-                self.conns[mac] = self.conns.pop(client_address)
+                self.conns[mac] = self.temp_conns.pop(client_address)
                 
                 with open('locations.json', 'r+') as f:
                     pcs = json.load(f)
@@ -46,8 +53,8 @@ class Server(basics.Encrypted_TCP_Server):
 
                 self.new_connection = True
             else:
-                self.conns[client_address].terminate()
-                self.conns.pop(client_address)
+                self.temp_conns[client_address].terminate()
+                self.temp_conns.pop(client_address)
                 print(f'Connection with {client_address} not allowed')
                 print(f'mac: {mac}')
                 print(f'allowed macs: {self.allowed_MACs}')
@@ -63,7 +70,7 @@ class Server(basics.Encrypted_TCP_Server):
         while True:
             for mac in self.conns.keys():
                 Thread(target=self.ping_one, args=(mac,)).start()
-            time.sleep(5)
+            time.sleep(10)
     
     def ping_one(self, mac):
         
@@ -86,6 +93,25 @@ class Server(basics.Encrypted_TCP_Server):
             if not client[1].add_app(path):
                 failed.append(client[0])
         return failed
+    
+    def stream_screen(self):
+        key = get_random_bytes(16)
+        for conn in self.conns.values():
+            conn.share_screen(key, BROADCAST_PORT)
+        
+        self.streamer = ScreenShare.MultiSender(BROADCAST_PORT, BROADCAST_PORT, key)
+        time.sleep(1)
+        Thread(target=self.streamer.start_stream).start()
+        self.streaming_screen = True
+        
+    def stop_streaming_screen(self):
+        self.streamer.stop_stream()
+        del self.streamer
+        self.streaming_screen = False
+    
+    def send_file_to_all(self, path):
+        for conn in self.conns.values():
+            Thread(target=conn.send_file, args=(conn, path)).start()
 
 class Client_Socket(basics.Encrypted_TCP_Socket):
     def __init__(self, ip, port, client_soc):
@@ -146,7 +172,7 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
     def recv_data(self):
         return super().recv_data(self.socket)
     
-    def share_screen(self):
+    def view_screen(self):
         self.send_data('SHARE_SCREEN')
         port = random.randint(49152, 65535)
         self.send_data(port.to_bytes(16, 'big'))
@@ -183,6 +209,19 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
     def add_app(self, path):
         self.send_data('ADD_APP')
         self.send_data(path.encode())
+    
+    def share_screen(self, key, port):
+        self.send_data('VIEW_TEACHER_SCREEN')
+        self.send_data(b''.join([key, port.to_bytes(16, 'big')]))
+    
+    def send_file(self, path):
+        self.send_data('RECV_FILE')
+        file_name = path.split('/')[-1]
+        self.send_data(file_name.encode())
+        
+        with open(path, 'rb') as file:
+            self.send_data(file.read())
+            
 
 def main():
     server = Server()

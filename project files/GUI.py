@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import font, messagebox
+from tkinter import font, messagebox, filedialog
 from PIL import Image, ImageTk
 import json
 from threading import Thread
@@ -84,30 +84,59 @@ class Main_Frame(Window):
         self.master.server.allow_new_connections = False
 
         self.bind('<Button-1>', lambda event: self.dropdown.place_forget())
+        
 
     def create_widgets(self):
-        self.create_edit_button()
-
+        self.create_menubar()
+        
     def create_dropdown(self, mac):
         self.dropdown = DropDownMenu(self, mac)
 
-    def create_edit_button(self):
-        self.edit_button = tk.Button(self, text = 'Edit', command = lambda: self.master.show_frame('edit'))
-        self.edit_button.place(x = 1100, y = 700)
-
+    def create_menubar(self):
+        self.menubar = tk.Menu(self)
+        actions_menu = tk.Menu(self.menubar, tearoff = 0)
+        actions_menu.add_command(label = 'Edit', command = self.show_edit_frame)
+        actions_menu.add_command(label = 'Stream Screen', command = lambda: self.master.server.stream_screen())
+        actions_menu.add_command(label = 'Send File', command = self.send_file)
+        
+        self.menubar.add_cascade(label = 'Actions', menu = actions_menu)
+        
+        self.master.config(menu = self.menubar)
+        
     def assign_dropdown(self, mac):
         if not self.pcs[mac].online:
             return
         self.create_dropdown(mac)
         pos = self.pcs_pos[mac]
         self.dropdown.place(x = pos[0]+10, y = pos[1]+130)
-  
+
         self.dropdown.tkraise()
     
     def create_PCIcon(self, mac, pos = (0,0), online = True):
         pc_icon = PCIcon_View_Mode(self, mac, pos, online)
         self.pcs_pos[mac] = pos
         return pc_icon
+
+    def show_edit_frame(self):
+        if self.master.server.streaming_screen:
+            messagebox.showerror('Error', 'You cannot edit the locations while streaming the screen')
+            return
+        
+        self.master.show_frame('edit')
+    
+    def stream_screen(self):
+        if self.master.server.streaming_screen:
+            messagebox.showerror('Error', 'You are already streaming the screen')
+            return
+        
+        self.master.server.stream_screen()
+    
+    def send_file(self):
+        file_path = filedialog.askopenfilename()
+        print(file_path)
+        self.master.server.send_file_to_all(file_path)
+        
+        
 
 class Edit_Frame(Window):
     def __init__(self, master=None):
@@ -230,7 +259,7 @@ class DropDownMenu(tk.Listbox):
         selection = self.curselection()[0]
         
         if selection == 0:#See Screen
-            Thread(target=self.master.master.server.conns[self.mac].share_screen).start()
+            Thread(target=self.master.master.server.conns[self.mac].view_screen()).start()
             
         elif selection == 1:#Freeze/Unfreeze
             if self.is_frozen:

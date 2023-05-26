@@ -100,6 +100,16 @@ class MultiSender(Sender):
         key (bytes): The encryption key to use for encrypting the data.
     """
     def __init__(self, local_port: int, dest_port: int, key: bytes):
+        """Initializes a ScreenShare object with the specified local and destination ports and encryption key.
+
+        Args:
+            local_port (int): The local port to bind to.
+            dest_port (int): The destination port to send data to.
+            key (bytes): The encryption key to use for data transmission.
+
+        Returns:
+            None
+        """
         super().__init__('0.0.0.0', local_port, '255.255.255.255', dest_port, key)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
@@ -110,7 +120,7 @@ class MultiSender(Sender):
             self.send_data(packets)
         print('stopped')
     
-    def stop(self):
+    def stop_stream(self):
         """A function that stops the stream.
         """
         self.stream = False

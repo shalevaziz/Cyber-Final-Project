@@ -213,7 +213,7 @@ class Encrypted_TCP_Socket:
         """
         raise NotImplementedError("This function must be implemented by a subclass")
     
-    def send_data(self, msg, socket = None, packet_size=4096):
+    def send_data(self, msg, socket = None, packet_size=4096, is_file = False):
         """This function encrypts the message and sends it to the server.
 
         Args:
@@ -276,6 +276,27 @@ class Encrypted_TCP_Socket:
         socket.send(msg)
         
         return self.decrypt_data(full_data)
+    
+    def recv_generator(self, socket = None):
+        """This function receives data from the server.
+        """
+        if socket == None:
+            socket = self.socket
+
+        data = socket.recv(40)
+        data = self.decrypt_data(data)
+        num_packets = int(data[:4], 16)
+        packet_size = int(data[4:8], 16)
+        
+        for i in range(num_packets):
+            data = socket.recv(packet_size)
+            yield self.decrypt_data(data)
+
+        msg = b'SUCCESS'
+        msg = self.cipher.encrypt(msg)
+        socket.send(msg)
+        
+        raise StopIteration("Finished Data Transfer")
 
 class Encrypted_UDP_Socket:
     def __init__(self, local_ip, local_port, dest_ip, dest_port, key):
