@@ -18,7 +18,7 @@ class Server(basics.Encrypted_TCP_Server):
         self.temp_conns = {}
         
         self.streaming_screen = False
-        
+                
         Thread(target=self.ping_all).start()
 
     def get_allowed_pcs(self):
@@ -77,14 +77,19 @@ class Server(basics.Encrypted_TCP_Server):
         if self.conns[mac] is None:
             return
         self.conns[mac].settimeout(5)
+        
         try:
             alive = self.conns[mac].ping()
         except ValueError:
             alive = False
             print('ValueError')
+            
         if not alive:
             print(f'{mac} is not alive')
             self.conns.pop(mac)
+        
+        self.new_connection = True
+        
         return alive
 
     def add_app(self, path):
@@ -111,7 +116,7 @@ class Server(basics.Encrypted_TCP_Server):
     
     def send_file_to_all(self, path):
         for conn in self.conns.values():
-            Thread(target=conn.send_file, args=(conn, path)).start()
+            Thread(target=conn.send_file, args=(path,)).start()
 
 class Client_Socket(basics.Encrypted_TCP_Socket):
     def __init__(self, ip, port, client_soc):
@@ -148,7 +153,9 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
             return True
         else:
             return self.initiate_encrypted_data_transfer()
-    
+    def settimeout(self, timeout):
+        self.socket.settimeout(timeout)
+        
     def get_MAC(self):
         """This function gets the MAC address of the client.
 
@@ -194,10 +201,13 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
     
     def ping(self):
         self.socket.settimeout(5)
-        self.send_data('PING')
-        response = self.recv_data()
-        return response == b'PONG'
-    
+        try:
+            self.send_data('PING')
+            response = self.recv_data()
+            return response == b'PONG'
+        except (ConnectionResetError, BrokenPipeError):
+            return False
+        
     def open_URL(self, URL):
         self.send_data('OPEN_URL')
         self.send_data(URL.encode())
@@ -214,13 +224,6 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         self.send_data('VIEW_TEACHER_SCREEN')
         self.send_data(b''.join([key, port.to_bytes(16, 'big')]))
     
-    def send_file(self, path):
-        self.send_data('RECV_FILE')
-        file_name = path.split('/')[-1]
-        self.send_data(file_name.encode())
-        
-        with open(path, 'rb') as file:
-            self.send_data(file.read())
             
 
 def main():

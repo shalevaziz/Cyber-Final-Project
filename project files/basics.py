@@ -21,7 +21,6 @@ import uuid
 from Crypto.Cipher import DES
 logger = Logger(debugging_mode=True)
 
-
 class Useful_Functions:
     def split_data(encrypted_msg, packet_size=4096):
         """This function splits the encrypted message into packets of 4096 bytes.
@@ -53,6 +52,22 @@ class Useful_Functions:
         mac = hex(uuid.getnode()).replace('0x', '').upper()
         return ':'.join([mac[i: i + 2] for i in range(0, 11, 2)])
 
+    def read_file(file_path, chunk_size=4096):
+        """This function reads a file and returns its contents
+
+        Args:
+            file_path (str): The path to the file
+
+        Returns:
+            bytes: The contents of the file
+        """
+        with open(file_path, 'rb') as f:
+            while True:
+                data = f.read(chunk_size)
+                if not data:
+                    break
+                yield data
+        raise StopIteration("Finished reading file")
 class Cipher:
     """This class is used to encrypt and decrypt messages using AES-EAX mode.
     It also authenticates the messages using HMAC.
@@ -277,26 +292,35 @@ class Encrypted_TCP_Socket:
         
         return self.decrypt_data(full_data)
     
-    def recv_generator(self, socket = None):
-        """This function receives data from the server.
+    def send_file(self, path):
+        """This function sends a file to the server.
+
+        Args:
+            path (string): The path of the file to send.
         """
-        if socket == None:
-            socket = self.socket
-
-        data = socket.recv(40)
-        data = self.decrypt_data(data)
-        num_packets = int(data[:4], 16)
-        packet_size = int(data[4:8], 16)
+        file_gen = Useful_Functions.read_file(path, 4064)
+        filename = path.split('/')[-1]
         
-        for i in range(num_packets):
-            data = socket.recv(packet_size)
-            yield self.decrypt_data(data)
-
-        msg = b'SUCCESS'
-        msg = self.cipher.encrypt(msg)
-        socket.send(msg)
+        self.send_data(filename)
+        try:
+            for buffer in file_gen:
+                buffer = self.cipher.encrypt(buffer)
+                self.socket.send(buffer)
+        except StopIteration:
+            msg = b'EOF'
+            msg = self.cipher.encrypt(msg)
+            self.socket.send(msg)
         
-        raise StopIteration("Finished Data Transfer")
+    def recv_file(self, path):
+        filename = self.recv_data()
+        
+        with open(path + filename, 'wb') as file:
+            while True:
+                data = self.socket.recv(4096)
+                data = self.decrypt_data(data)
+                if data == b'EOF':
+                    break
+                file.write(data)
 
 class Encrypted_UDP_Socket:
     def __init__(self, local_ip, local_port, dest_ip, dest_port, key):
@@ -382,8 +406,6 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
         super().__init__(ip, port)
         if DES_key:
             self.cipher = Cipher_DES(DES_key)
-
-        
 
     def handle_connection(self):
         """This function handles the connection to the server.
@@ -475,8 +497,7 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
             print(f'Connection from {client_address[0]}:{client_address[1]}')
             self.conns[client_address] = None
             Thread(target=self.handle_connection, args=(client_soc, client_address)).start()
-    
-    
+
 def main():
     pass
 

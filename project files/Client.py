@@ -44,7 +44,7 @@ class Client(basics.Encrypted_TCP_Client):
                 elif msg == 'ADD_APP':
                     self.add_app(self.recv_data().decode())
                 elif msg == 'RECV_FILE':
-                    self.recv_file()
+                    self.recv_file(DOWNLOADS_PATH)
                     
                 
         except ConnectionAbortedError:
@@ -84,20 +84,10 @@ class Client(basics.Encrypted_TCP_Client):
         key = key_and_port[:16]
         port = int.from_bytes(key_and_port[16:], 'big')
         
-        reciever = ScreenShare.Receiver(self.ip, port, key, student_mode=True)
+        reciever = ScreenShare.Receiver('0.0.0.0', port, key, student_mode=True)
         threading.Thread(target=reciever.start_stream).start()
 
-    def recv_file(self):
-        filename = self.recv_data().decode()
-        with open(DOWNLOADS_PATH + filename, 'wb') as f:
-            generator = self.recv_generator()
-            try:
-                for data in generator:
-                    f.write(data)
-            except StopIteration:
-                pass
-            
-        os.startfile(DOWNLOADS_PATH + filename)
+   
         
         
 

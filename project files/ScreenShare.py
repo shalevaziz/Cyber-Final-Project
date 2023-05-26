@@ -124,7 +124,7 @@ class MultiSender(Sender):
         """A function that stops the stream.
         """
         self.stream = False
-        self.s.sendto(self.cipher.encrypt(b'STOP000000000000'), (self.dest_ip, self.dest_port))
+
 class Receiver:
     def __init__(self, local_ip: str, local_port: int, key: bytes, student_mode: bool = False):
         self.local_ip = local_ip
@@ -142,7 +142,6 @@ class Receiver:
         """
         self.stream = False
         
-    
     def start_stream(self):
         """This function starts the stream.
         """
@@ -229,8 +228,8 @@ class Receiver:
 
 
 def main():
-    send = MultiSender(25565, 25565, b'1234567890123456')
-    send.start_stream()
+    recv = Receiver('0.0.0.0', 25565, b'1234567890123456')
+    recv.start_stream()
     
 
 if __name__ == '__main__':

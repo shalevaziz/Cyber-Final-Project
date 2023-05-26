@@ -74,8 +74,7 @@ class Window(tk.Frame):
             self.master.server.new_connection = False
             while not self.master.server.new_connection and self.winfo_exists():
                 time.sleep(2)
-            
-            
+
 class Main_Frame(Window):
     def __init__(self, master):
         super().__init__(master)
@@ -84,7 +83,6 @@ class Main_Frame(Window):
         self.master.server.allow_new_connections = False
 
         self.bind('<Button-1>', lambda event: self.dropdown.place_forget())
-        
 
     def create_widgets(self):
         self.create_menubar()
@@ -135,8 +133,6 @@ class Main_Frame(Window):
         file_path = filedialog.askopenfilename()
         print(file_path)
         self.master.server.send_file_to_all(file_path)
-        
-        
 
 class Edit_Frame(Window):
     def __init__(self, master=None):
