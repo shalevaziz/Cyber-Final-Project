@@ -232,6 +232,79 @@ class Encrypted_TCP_Socket:
         """
         raise NotImplementedError("This function must be implemented by a subclass")
     
+    def __send_packet(self, packet, socket = None):
+        self.socket.send(self.cipher.encrypt(packet))
+        response = self.socket.recv(17)
+        
+        try:
+            response = self.cipher.decrypt(response)
+        except ValueError:
+            response = b'0'
+        
+        while response != b'1':
+            self.socket.send(packet)
+            response = self.socket.recv(17)
+            try:
+                response = self.cipher.decrypt(response)
+            except ValueError:
+                response = b'0'
+    
+    def recv_packet(self, socket = None):
+        
+        if socket == None:
+            socket = self.socket
+        
+        length = socket.recv(48)
+        recieved = False
+        try:
+            length = self.cipher.decrypt(length)
+            length = int.from_bytes(length, byteorder='big')
+            recieved = True
+        except ValueError:
+            pass
+        
+        while not recieved:
+            socket.send(b'0')
+            length = socket.recv(48)
+            try:
+                length = self.cipher.decrypt(length)
+                length = int.from_bytes(length, byteorder='big')
+                recieved = True
+            except ValueError:
+                pass
+        
+        socket.send(b'1')
+        
+        recieved = False
+        packet = socket.recv(length)
+        
+        try:
+            packet = self.cipher.decrypt(packet)
+            recieved = True
+        except ValueError:
+            pass
+        
+        while not recieved:
+            socket.send(b'0')
+            packet = socket.recv(length)
+            try:
+                packet = self.cipher.decrypt(packet)
+                recieved = True
+            except ValueError:
+                pass
+        
+        socket.send(b'1')
+        return packet
+
+    def send_packet(self, packet, socket = None):
+        
+        packet_size = (len(packet)+32).to_bytes(16, byteorder='big')
+        
+        self.__send_packet(packet_size, socket)
+        
+        self.__send_packet(packet, socket)
+        
+    
     def send_data(self, msg, socket = None, packet_size=4096, is_file = False):
         """This function encrypts the message and sends it to the server.
 
@@ -245,36 +318,20 @@ class Encrypted_TCP_Socket:
         if type(msg) == str:
             msg = msg.encode()
 
-        ciphertext = self.cipher.encrypt(msg)
-        packets = Useful_Functions.split_data(ciphertext, packet_size=packet_size)
-        first_packet = str(hex(len(packets))).encode().replace(b'0x', b'').zfill(4)
-        first_packet += str(hex(packet_size)).encode().replace(b'0x', b'').zfill(4)
-        first_packet = self.cipher.encrypt(first_packet)
-        socket.send(first_packet)
+        packets = Useful_Functions.split_data(msg, packet_size=(packet_size-32))
+        
+        first_packet = len(packets).to_bytes(16, byteorder='big')
+        
+        self.send_packet(first_packet, socket)
         
         for packet in packets:
-            socket.send(packet)
+            self.send_packet(packet, socket)
 
         socket.settimeout(10000)
-        response = socket.recv(39)
-        response = self.cipher.decrypt(response)
+
         
-        return response == b"SUCCESS"
+        return True
     
-    def decrypt_data(self, data):
-        """This function decrypts the data using the AES-256 key.
-
-        Args:
-            data (bytes): The data to decrypt.
-
-        Returns:
-            bytes: The decrypted data, or False if the decryption failed
-        """
-        
-        msg = self.cipher.decrypt(data)
-        
-        return msg
-
     def recv_data(self, socket = None):
         """This function receives data from the server.
         """
@@ -282,19 +339,13 @@ class Encrypted_TCP_Socket:
             socket = self.socket
 
         full_data = b''
-        data = socket.recv(40)
-        data = self.decrypt_data(data)
-        num_packets = int(data[:4], 16)
-        packet_size = int(data[4:8], 16)
-        for i in range(num_packets):
-            data = socket.recv(packet_size)
-            full_data += data
-
-        msg = b'SUCCESS'
-        msg = self.cipher.encrypt(msg)
-        socket.send(msg)
+        packet_amount = self.recv_packet(socket)
         
-        return self.decrypt_data(full_data)
+        for i in range(int.from_bytes(packet_amount, byteorder='big')):
+            packet = self.recv_packet(socket)
+            full_data += packet
+        
+        return full_data
     
     def send_file(self, path):
         """This function sends a file to the server.
