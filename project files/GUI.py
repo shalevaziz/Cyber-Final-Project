@@ -73,7 +73,7 @@ class Window(tk.Frame):
             self.load_pcs()
             self.master.server.new_connection = False
             while not self.master.server.new_connection and self.winfo_exists():
-                time.sleep(2)
+                time.sleep(3)
 
 class Main_Frame(Window):
     def __init__(self, master):
