@@ -28,7 +28,7 @@ class Client(basics.Encrypted_TCP_Client):
                 elif msg == 'GET_MAC':
                     self.send_MAC()
                 elif msg == 'SHARE_SCREEN':
-                    threading.Thread(target=self.share_screen).start()
+                    self.share_screen()
                 elif msg == 'STOP_SHARE_SCREEN':
                     self.stop_share_screen()
                 elif msg == 'VIEW_TEACHER_SCREEN':
@@ -56,6 +56,7 @@ class Client(basics.Encrypted_TCP_Client):
         time.sleep(1)
         dest_port = self.recv_data()
         dest_port = int.from_bytes(dest_port, 'big')
+        print(dest_port)
         dest_ip = self.socket.getpeername()[0]
         
         local_port = random.randint(49152, 65535)
@@ -64,8 +65,10 @@ class Client(basics.Encrypted_TCP_Client):
         
         print(self.cipher.get_key()[:8])
         self.sharescreen_transmitter = ScreenShare.Sender(local_ip=local_ip, local_port=local_port, dest_ip=dest_ip, dest_port=dest_port, key = self.cipher.get_key()[:16])
+        threading.Thread(target=self.__share_screen).start()
+        
+    def __share_screen(self):
         try:
-            threa
             self.sharescreen_transmitter.start_stream()
         except ConnectionAbortedError:
             return

@@ -86,7 +86,10 @@ class Server(basics.Encrypted_TCP_Server):
             
         if not alive:
             print(f'{mac} is not alive')
-            self.conns.pop(mac)
+            try:
+                self.conns.pop(mac)
+            except KeyError:
+                pass
         
         self.new_connection = True
         

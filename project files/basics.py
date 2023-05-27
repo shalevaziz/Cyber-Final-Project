@@ -255,7 +255,6 @@ class Encrypted_TCP_Socket:
         for packet in packets:
             socket.send(packet)
 
-        socket.settimeout(10000)
         response = socket.recv(39)
         response = self.cipher.decrypt(response)
         
