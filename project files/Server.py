@@ -19,7 +19,7 @@ class Server(basics.Encrypted_TCP_Server):
         
         self.streaming_screen = False
                 
-        Thread(target=self.ping_all).start()
+        #Thread(target=self.ping_all).start()
 
     def get_allowed_pcs(self):
         with open('locations.json', 'r+') as f:
@@ -204,12 +204,12 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         self.socket.close()
     
     def ping(self):
-        self.socket.settimeout(3)
+        self.socket.settimeout(10)
         try:
             self.send_data('PING')
             response = self.recv_data()
             return response == b'PONG'
-        except (ConnectionResetError, BrokenPipeError):
+        except (ConnectionResetError, BrokenPipeError, TimeoutError):
             return False
         
     def open_URL(self, URL):

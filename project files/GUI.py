@@ -4,6 +4,9 @@ from PIL import Image, ImageTk
 import json
 from threading import Thread
 import time
+import os
+from hashlib import sha256
+from basics import Cipher
 class Main_Window(tk.Tk):
     def __init__(self, server):
         super().__init__()
@@ -20,7 +23,7 @@ class Main_Window(tk.Tk):
         self.current_frame = self.frames[self.current_frame_name](self)
         self.current_frame.pack(anchor='nw', fill='both', expand=True)
         
-        
+
         
         self.mainloop()
     
@@ -29,11 +32,37 @@ class Main_Window(tk.Tk):
         self.frames['edit'] = Edit_Frame
     
     def show_frame(self, frame):
+        if frame == 'edit':
+            if not self.check_password():
+                return
         self.current_frame.destroy()
         self.current_frame_name = frame
         self.current_frame = self.frames[self.current_frame_name](self)
         self.current_frame.pack(anchor='nw', fill='both', expand=True)
         self.current_frame.load_pcs()
+    
+    def check_password(self):
+        if os.path.isfile('password.txt'):
+            with open('password.txt', 'rb') as f:
+                password = f.read()
+                if password != '':
+                    user_input = tk.simpledialog.askstring('Password', 'Enter password', show='*').encode()
+                    user_input = sha256(user_input).digest()
+                    user_input = sha256(user_input).digest()
+                    if  password == user_input:
+                        return True
+                    else:
+                        messagebox.showerror('Error', 'Wrong password')
+                        return False
+                
+        
+        user_input = tk.simpledialog.askstring('Create Password', 'No Password file was found. Please create a password.', show='*').encode()
+        user_input = sha256(user_input).digest()
+        user_input = sha256(user_input).digest()
+        with open('password.txt', 'wb') as f:
+            f.write(user_input)
+        return True
+        
 
 class Window(tk.Frame):
     def __init__(self, master=None):

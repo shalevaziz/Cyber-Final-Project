@@ -71,7 +71,6 @@ class Useful_Functions:
                 if not data:
                     break
                 yield data
-        yield b'EOF'
 class Cipher:
     """This class is used to encrypt and decrypt messages using AES-EAX mode.
     It also authenticates the messages using HMAC.
@@ -304,27 +303,42 @@ class Encrypted_TCP_Socket:
         file_gen = Useful_Functions.read_file(path, 4064)
         filename = path.split('/')[-1]
         
-        self.send_data(filename)
+        file_size = os.path.getsize(path)
+        num_packets = math.ceil(file_size / 4064)
+        last = file_size % 4064 + 32
+        
+        num_packets = num_packets.to_bytes(32, 'big')
+        last = last.to_bytes(12, 'big')
+        filename = filename.encode()
+        
+        msg = num_packets + last + filename
+        
+        self.send_data(msg)
         try:
             for buffer in file_gen:
-                
                 buffer = self.cipher.encrypt(buffer)
+                print(buffer, len(buffer))
+                
                 self.socket.send(buffer)
         except StopIteration:
             print('sent eof')
         
     def recv_file(self, path):
-        filename = self.recv_data().decode()
+        msg = self.recv_data()
+        
+        num_packets = int.from_bytes(msg[:32], 'big')
+        last = int.from_bytes(msg[32:44], 'big')
+        filename = msg[44:].decode()
         path = os.path.join(path, filename)
-        print(path)
+        
         with open(path, 'wb') as file:
-            while True:
+            for i in range(num_packets-1):
                 data = self.socket.recv(4096)
                 data = self.decrypt_data(data)
-                if data == b'EOF':
-                    break
                 file.write(data)
-                print(data)
+            data = self.socket.recv(last)
+            data = self.decrypt_data(data)
+            file.write(data)
 
 class Encrypted_UDP_Socket:
     def __init__(self, local_ip, local_port, dest_ip, dest_port, key):
