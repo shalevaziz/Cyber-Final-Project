@@ -92,7 +92,7 @@ class Client(basics.Encrypted_TCP_Client):
 
     def recv_file(self, path):
         super().recv_file(path)
-        os.startfile(path)
+        #os.startfile(path)
 
    
         
@@ -100,7 +100,7 @@ class Client(basics.Encrypted_TCP_Client):
 
 
 def main():
-    client = Client('192.168.68.121', 25565)
+    client = Client('127.0.0.1', 25565)
     client.handle_connection()
     
     

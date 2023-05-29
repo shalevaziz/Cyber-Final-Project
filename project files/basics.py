@@ -307,6 +307,8 @@ class Encrypted_TCP_Socket:
         num_packets = math.ceil(file_size / 4064)
         last = file_size % 4064 + 32
         
+        print(num_packets, last, filename)
+        
         num_packets = num_packets.to_bytes(32, 'big')
         last = last.to_bytes(12, 'big')
         filename = filename.encode()
@@ -319,7 +321,7 @@ class Encrypted_TCP_Socket:
                 buffer = self.cipher.encrypt(buffer)
                 print(buffer, len(buffer))
                 
-                self.socket.send(buffer)
+                self.socket.sendall(buffer)
         except StopIteration:
             print('sent eof')
         
@@ -329,14 +331,20 @@ class Encrypted_TCP_Socket:
         num_packets = int.from_bytes(msg[:32], 'big')
         last = int.from_bytes(msg[32:44], 'big')
         filename = msg[44:].decode()
+        
+        print(num_packets, last, filename)
+        
         path = os.path.join(path, filename)
         
         with open(path, 'wb') as file:
             for i in range(num_packets-1):
                 data = self.socket.recv(4096)
+                print(len(data))
                 data = self.decrypt_data(data)
                 file.write(data)
             data = self.socket.recv(last)
+            print(len(data))
+            
             data = self.decrypt_data(data)
             file.write(data)
 
@@ -428,7 +436,7 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
     def handle_connection(self):
         """This function handles the connection to the server.
         """
-        self.socket.settimeout(5)
+        self.socket.settimeout(1000)
         self.connected = False
         while not self.connected:
             try:
