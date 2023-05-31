@@ -12,7 +12,22 @@ HEADER_SIZE: int = 7
 
 
 class Sender:
+    """This class streams the screen to the Receiver.
+    """
     def __init__(self, local_ip: str, local_port: int, dest_ip: str, dest_port: int, key: bytes):
+        """
+        Initializes a Sender object with the specified local and destination IP addresses, ports and encryption key.
+
+        Args:
+            local_ip (str): The local IP address to bind the socket to.
+            local_port (int): The local port to bind the socket to.
+            dest_ip (str): The IP address of the remote destination.
+            dest_port (int): The port of the remote destination.
+            key (bytes): The encryption key to use for data transmission.
+
+        Returns:
+            None
+        """
         self.local_ip = local_ip
         self.local_port = local_port
         self.dest_ip = dest_ip
@@ -27,12 +42,25 @@ class Sender:
         self.key = key
         self.cipher = Cipher_ECB(self.key)
 
-    def wait_for_stop(self):
+    def wait_for_stop(self) -> None:
+        """
+        Waits for a stop signal from the Receiver.
+        This is used to stop the streaming from the student when the teacher stops it.
+
+        Returns:
+            None
+        """
         msg, _ = self.s.recvfrom(16)
         if self.cipher.decrypt(msg) == b'STOP000000000000':
             self.stream = False
 
-    def start_stream(self):
+    def start_stream(self) -> None:
+        """
+        Starts the stream and sends data to the client.
+
+        Returns:
+            None
+        """
         threading.Thread(target=self.wait_for_stop).start()
         while self.stream:
             frame = self.take_screenshot()
@@ -40,8 +68,9 @@ class Sender:
             self.send_data(packets)
         print('stopped')
         
-    def take_screenshot(self):
-        """This function takes a screenshot of the screen.
+    def take_screenshot(self) -> bytes:
+        """
+        Takes a screenshot of the screen.
 
         Returns:
             bytes: The screenshot of the screen.
@@ -57,8 +86,9 @@ class Sender:
         frame = frame.tobytes()
         return frame
 
-    def split_into_packets(self, data: bytes):
-        """This function splits the data into packets.
+    def split_into_packets(self, data: bytes) -> list[bytes]:
+        """
+        Splits the data into packets.
 
         Args:
             data (bytes): The data to split.
@@ -80,16 +110,20 @@ class Sender:
 
         return packets
 
-    def send_data(self, packets: list[bytes]):
-        """This function sends data to the client
+    def send_data(self, packets: list[bytes]) -> None:
+        """
+        Sends data to the client.
 
         Args:
             packets (list[bytes]): The data to send.
-        """
 
+        Returns:
+            None
+        """
         for packet in packets:
             self.s.sendto(packet, (self.dest_ip, self.dest_port))
-            time.sleep(0.001)
+            time.sleep(0.001)#The receiver can't handle the data if it's sent too fast.
+
 class MultiSender(Sender):
     """A class that broadcasts this PC's screen to multiple remote destinations.
 
@@ -114,6 +148,8 @@ class MultiSender(Sender):
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     def start_stream(self):
+        """A function that starts the stream and sends data to the clients.
+        """
         while self.stream:
             frame = self.take_screenshot()
             packets = self.split_into_packets(frame)
@@ -126,7 +162,21 @@ class MultiSender(Sender):
         self.stream = False
 
 class Receiver:
-    def __init__(self, local_ip: str, local_port: int, key: bytes, student_mode: bool = False):
+    """A class that receives the screen data from the sender.
+    """
+    def __init__(self, local_ip: str, local_port: int, key: bytes, student_mode: bool = False) -> None:
+        """
+        Initializes a Receiver object with the specified local IP, local port, encryption key, and student mode.
+
+        Args:
+            local_ip (str): The local IP address to bind the socket to.
+            local_port (int): The local port to bind the socket to.
+            key (bytes): The encryption key to use for decrypting the data.
+            student_mode (bool): A boolean indicating whether the receiver is in student mode.
+
+        Returns:
+            None
+        """
         self.local_ip = local_ip
         self.local_port = local_port
         self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -137,13 +187,22 @@ class Receiver:
         
         self.student_mode = student_mode
     
-    def stop(self):
-        """This function stops the stream.
+    def stop(self) -> None:
+        """
+        Stops the stream.
+        Used outside of the class, by the main thread.
+
+        Returns:
+            None
         """
         self.stream = False
         
-    def start_stream(self):
-        """This function starts the stream.
+    def start_stream(self) -> None:
+        """
+        Starts the stream.
+
+        Returns:
+            None
         """
         self.stream = True
         
@@ -152,11 +211,12 @@ class Receiver:
         self.thread.start()
         self.show_screenshots()
     
-    def recv_frame(self):
-        """This function receives packets from the server.
+    def recv_frame(self) -> bytes:
+        """
+        Receives packets from the server.
 
-        Args:
-            s (socket): The socket to receive data from.
+        Returns:
+            data (bytes): The received data.
         """
         packets = []
 
@@ -176,12 +236,16 @@ class Receiver:
         packets = sorted(packets, key=lambda x: int.from_bytes(x[:2], 'big'))
         packets = [packet[2:] for packet in packets]
         data = b''.join(packets)
-        data = data[:data_len]
+
         
         return data
 
-    def show_screenshots(self):
-        """This function shows the screenshot.
+    def show_screenshots(self) -> None:
+        """
+        Shows the screenshot.
+
+        Returns:
+            None
         """
                 
         state = 1
@@ -204,24 +268,23 @@ class Receiver:
             
             if not self.student_mode:
                 try:
-                    state = cv2.getWindowProperty(screen_name, 0)
+                    state = cv2.getWindowProperty(screen_name, 0)#checks if the window is closed
                 except cv2.error as e:
                     state -= 1
-                    print(state)
-                    print(e)
             
-            if state < 0:
+            if state < 0:#if the window is closed, stop the stream
                 self.stream = False
                 cv2.destroyAllWindows()
                 break
             
             cv2.waitKey(1)
 
-    def recv_frames(self):
-        """This function continuously receives frames from the server.
+    def recv_frames(self) -> None:
+        """
+        Continuously receives frames from the server.
 
-        Args:
-            s (socket): The socket to receive data from.
+        Returns:
+            None
         """
         while self.stream:
             self.data = self.recv_frame()

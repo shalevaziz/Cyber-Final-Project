@@ -1,21 +1,34 @@
 import basics
-#import Freeze
+import Freeze
 import ScreenShare
 import socket
 import random
 import time
 import threading
-#import AppOpener
 from pathlib import Path
 import os
+
 DOWNLOADS_PATH = str(Path.home() / "Downloads")
 
 class Client(basics.Encrypted_TCP_Client):
+    """
+    A class representing a client that connects to a server using encrypted TCP connection.
+    """
     def __init__(self, ip='127.0.0.1', port=25565):
+        """
+        Initializes a new instance of the Client class.
+
+        Args:
+            ip (str): The IP address of the server to connect to. Default is '127.0.0.1'.
+            port (int): The port number of the server to connect to. Default is 25565.
+        """
         super().__init__(ip, port)
         #self.freezer = Freeze.Freezer()
     
     def handle_connection(self):
+        """
+        Handles the connection with the server.
+        """
         try:
             super().handle_connection()
             while True:
@@ -38,7 +51,7 @@ class Client(basics.Encrypted_TCP_Client):
                 elif msg == 'PING':
                     self.send_data('PONG')
                 elif msg == 'OPEN_URL':
-                    AppOpener.AppOpener.open_url(self.recv_data().decode())
+                    self.open_URL()
                 elif msg == 'OPEN_APP':
                     AppOpener.AppOpener.open_app(self.recv_data().decode())
                 elif msg == 'ADD_APP':
@@ -53,6 +66,9 @@ class Client(basics.Encrypted_TCP_Client):
             basics.logger.log('Connection reset', self.logger_name)
     
     def share_screen(self):
+        """
+        Shares the screen with the server.
+        """
         time.sleep(1)
         dest_port = self.recv_data()
         dest_port = int.from_bytes(dest_port, 'big')
@@ -68,21 +84,36 @@ class Client(basics.Encrypted_TCP_Client):
         threading.Thread(target=self.__share_screen).start()
         
     def __share_screen(self):
+        """
+        Shares the screen with the server.
+        """
         try:
             self.sharescreen_transmitter.start_stream()
         except ConnectionAbortedError:
             return
     
     def stop_share_screen(self):
+        """
+        Stops sharing the screen with the server.
+        """
         if "sharescreen_transmitter" in dir(self):
             self.sharescreen_transmitter.stop_stream()
             del self.sharescreen_transmitter
 
     def add_app(self, path):
+        """
+        Adds an application to the system.
+
+        Args:
+            path (str): The path of the application to add.
+        """
         response = AppOpener.AppOpener.add_app(path)
         self.send_data(str(response).encode())
     
     def view_teacher_screen(self):
+        """
+        Views the teacher's screen.
+        """
         key_and_port = self.recv_data()
         key = key_and_port[:16]
         port = int.from_bytes(key_and_port[16:], 'big')
@@ -91,12 +122,25 @@ class Client(basics.Encrypted_TCP_Client):
         threading.Thread(target=reciever.start_stream).start()
 
     def recv_file(self, path):
+        """
+        Receives a file from the server.
+
+        Args:
+            path (str): The path to save the received file.
+        """
         super().recv_file(path)
         #os.startfile(path)
 
-   
-        
-        
+    def open_URL(self):
+        """
+        Opens a URL.
+
+        Args:
+            url (str): The URL to open.
+        """
+        url = self.recv_data().decode()
+        os.system(f'start {url}')
+
 
 
 def main():

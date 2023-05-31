@@ -20,11 +20,15 @@ import uuid
 #import Fernet
 from Crypto.Cipher import DES
 import os
+
+logger: Logger
 logger = Logger(debugging_mode=True)
 
 class Useful_Functions:
+    """This class contains multiple useful functions. 
+    """
     @staticmethod
-    def split_data(encrypted_msg, packet_size=4096):
+    def split_data(encrypted_msg: bytes, packet_size: int=4096):
         """This function splits the encrypted message into packets of 4096 bytes.
         It also adds a b'END' packet at the end.
 
@@ -56,7 +60,7 @@ class Useful_Functions:
         return ':'.join([mac[i: i + 2] for i in range(0, 11, 2)])
 
     @staticmethod
-    def read_file(file_path: str, chunk_size=4096):
+    def read_file(file_path: str, chunk_size: int = 4096):
         """This function reads a file and returns its contents
 
         Args:
@@ -75,20 +79,21 @@ class Cipher:
     """This class is used to encrypt and decrypt messages using AES-EAX mode.
     It also authenticates the messages using HMAC.
     """
-    def __init__(self, key=None, bytes=32):
+
+
+    def __init__(self, key: bytes = None, bytes: int = 32):
         """This function initializes the cipher.
 
         Args:
             key (bytes, optional): The key to use. If None, a random key is generated. Defaults to None.
             bytes (int, optional): The number of bytes to use for the key. Defaults to 32.
         """
-        self.bytes = bytes
         if key == None:
             self.__key = get_random_bytes(bytes)
         else:
             self.__key = key
         
-    def encrypt(self, msg):
+    def encrypt(self, msg: bytes) -> bytes:
         """This function encrypts the message
 
         Args:
@@ -101,7 +106,7 @@ class Cipher:
         ciphertext, tag = cipher.encrypt_and_digest(msg)
         return cipher.nonce + tag + ciphertext
     
-    def decrypt(self, msg):
+    def decrypt(self, msg: bytes) -> bytes:
         """This function decrypts a full message(a message that includes the nonce, tag and ciphertext)
 
         Args:
@@ -113,9 +118,9 @@ class Cipher:
         nonce = msg[:16]
         tag = msg[16:32]
         ciphertext = msg[32:]
-        return self.basic_decrypt(ciphertext, nonce, tag)
+        return self.__decrypt(ciphertext, nonce, tag)
         
-    def basic_decrypt(self, msg, nonce, tag):
+    def __decrypt(self, msg: bytes, nonce: bytes, tag: bytes) -> bytes:
         """This function decrypts a message that only includes the ciphertext.
         It also authenticates the message using the nonce and tag.
 
@@ -128,7 +133,7 @@ class Cipher:
         cipher = AES.new(self.__key, AES.MODE_EAX, nonce=nonce)
         return cipher.decrypt_and_verify(msg, tag)
     
-    def set_key(self, key):
+    def set_key(self, key: bytes) -> None:
         """This function sets the key of the cipher.
 
         Args:
@@ -137,7 +142,7 @@ class Cipher:
         if len(key) == self.bytes:
             self.__key = key
     
-    def get_key(self):
+    def get_key(self) -> bytes:
         """This function returns the key of the cipher.
 
         Returns:
@@ -146,17 +151,15 @@ class Cipher:
         return self.__key
 
 class Cipher_ECB:
-    """This class is used to encrypt and decrypt messages using DES mode.
-    It also authenticates the messages using HMAC.
+    """This class is used to encrypt and decrypt messages using ECB mode.
     """
-    def __init__(self, key=None, bytes=16):
+    def __init__(self, key: bytes = None, bytes: int = 16):
         """This function initializes the cipher.
 
         Args:
             key (bytes, optional): The key to use. If None, a random key is generated. Defaults to None.
             bytes (int, optional): The number of bytes to use for the key. Defaults to 32.
         """
-        self.bytes = bytes
         if key == None:
             self.__key = get_random_bytes(bytes)
         else:
@@ -164,7 +167,7 @@ class Cipher_ECB:
         
         self.__cipher = AES.new(self.__key, AES.MODE_ECB)
         
-    def encrypt(self, msg):
+    def encrypt(self, msg: bytes) -> bytes:
         """This function encrypts the message
 
         Args:
@@ -173,10 +176,10 @@ class Cipher_ECB:
         Returns:
             bytes: The encrypted message
         """
-        ciphertext = self.__cipher.encrypt(msg)
+        ciphertext: bytes = self.__cipher.encrypt(msg)
         return ciphertext
     
-    def decrypt(self, msg):
+    def decrypt(self, msg: bytes) -> bytes:
         """This function decrypts a full message(a message that includes the nonce, tag and ciphertext)
 
         Args:
@@ -185,11 +188,11 @@ class Cipher_ECB:
         Returns:
             bytes: The decrypted message
         """
-        decrypted = self.__cipher.decrypt(msg)
+        decrypted: bytes = self.__cipher.decrypt(msg)
         
         return decrypted
     
-    def set_key(self, key):
+    def set_key(self, key: bytes) -> None:
         """This function sets the key of the cipher.
 
         Args:
@@ -198,7 +201,7 @@ class Cipher_ECB:
         if len(key) == self.bytes:
             self.__key = key
     
-    def get_key(self):
+    def get_key(self) -> bytes:
         """This function returns the key of the cipher.
 
         Returns:
@@ -207,9 +210,9 @@ class Cipher_ECB:
         return self.__key
 
 class Encrypted_TCP_Socket:
-    """This class is used to create a TCP socket that uses encryption.
+    """This class is used as an abstract class for the client and server classes.
     """
-    def __init__(self, ip, port):
+    def __init__(self, ip: str, port: int):
         """This function initializes the socket and connects to the server.
 
         Args:
@@ -231,7 +234,7 @@ class Encrypted_TCP_Socket:
         """
         raise NotImplementedError("This function must be implemented by a subclass")
     
-    def send_data(self, msg, socket = None, packet_size=4096, is_file = False):
+    def send_data(self, msg, socket:socket.socket = None, packet_size:int =4096, is_file:bool = False) -> bool:
         """This function encrypts the message and sends it to the server.
 
         Args:
@@ -246,8 +249,9 @@ class Encrypted_TCP_Socket:
 
         ciphertext = self.cipher.encrypt(msg)
         packets = Useful_Functions.split_data(ciphertext, packet_size=packet_size)
-        first_packet = str(hex(len(packets))).encode().replace(b'0x', b'').zfill(4)
-        first_packet += str(hex(packet_size)).encode().replace(b'0x', b'').zfill(4)
+        first_packet = len(packets).to_bytes(16, byteorder='big')
+        first_packet += packet_size.to_bytes(16, byteorder='big')
+        first_packet += len(packets[-1]).to_bytes(16, byteorder='big')
         first_packet = self.cipher.encrypt(first_packet)
         socket.send(first_packet)
         
@@ -258,41 +262,38 @@ class Encrypted_TCP_Socket:
         response = self.cipher.decrypt(response)
         
         return response == b"SUCCESS"
-    
-    def decrypt_data(self, data):
-        """This function decrypts the data using the AES-256 key.
 
-        Args:
-            data (bytes): The data to decrypt.
-
-        Returns:
-            bytes: The decrypted data, or False if the decryption failed
-        """
-        
-        msg = self.cipher.decrypt(data)
-        
-        return msg
-
-    def recv_data(self, socket = None):
+    def recv_data(self, socket:socket.socket = None):
         """This function receives data from the server.
         """
         if socket == None:
             socket = self.socket
 
         full_data = b''
-        data = socket.recv(40)
-        data = self.decrypt_data(data)
-        num_packets = int(data[:4], 16)
-        packet_size = int(data[4:8], 16)
-        for i in range(num_packets):
+        data = socket.recv(80)
+        data = self.cipher.decrypt(data)
+        num_packets = int.from_bytes(data[:16], byteorder='big')
+        packet_size = int.from_bytes(data[16:32], byteorder='big')
+        last_packet = int.from_bytes(data[32:], byteorder='big')
+        for i in range(num_packets-1):
             data = socket.recv(packet_size)
             full_data += data
 
-        msg = b'SUCCESS'
+        data = socket.recv(last_packet)
+        full_data += data
+        
+        try:
+            full_data = self.cipher.decrypt(full_data)
+            msg = b'SUCCESS'
+            
+        except ValueError:
+            msg = b'FAIL'
+            full_data = b''
+            
         msg = self.cipher.encrypt(msg)
         socket.send(msg)
         
-        return self.decrypt_data(full_data)
+        return full_data
     
     def send_file(self, path):
         """This function sends a file to the server.
@@ -326,6 +327,11 @@ class Encrypted_TCP_Socket:
             print('sent eof')
         
     def recv_file(self, path):
+        """This function receives a file from the server.
+
+        Args:
+            path (string): The path to save the file to.
+        """
         msg = self.recv_data()
         
         num_packets = int.from_bytes(msg[:32], 'big')
@@ -340,87 +346,19 @@ class Encrypted_TCP_Socket:
             for i in range(num_packets-1):
                 data = self.socket.recv(4096)
                 print(len(data))
-                data = self.decrypt_data(data)
+                data = self.cipher.decrypt(data)
                 file.write(data)
             data = self.socket.recv(last)
             print(len(data))
             
-            data = self.decrypt_data(data)
+            data = self.cipher.decrypt(data)
             file.write(data)
 
-class Encrypted_UDP_Socket:
-    def __init__(self, local_ip, local_port, dest_ip, dest_port, key):
-        """This function initializes the socket and connects to the server.
-
-        Args:
-            dest_ip (string): The IP address of the server.
-            dest_port (int): The port of the server.
-            local_ip (string, optional): The IP address of the local machine. Defaults to None.
-            local_port (int, optional): The port of the local machine. Defaults to None.
-        """
-        self.dest_ip = dest_ip
-        self.dest_port = dest_port
-        self.local_ip = local_ip
-        self.local_port = local_port
-        self.logger_name = "Root"
-
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind((local_ip, local_port))
-
-        self.cipher = Cipher_DES(key)
-        
-    def send_data(self, msg, packet_size=16384):
-        """This function encrypts the message and sends it to the server.
-
-        Args:
-            msg (string): The message to send.
-            socket (socket): The socket used to send the data.
-        """
-        print(len(msg))
-        if type(msg) == str:
-            msg = msg.encode()
-
-        ciphertext = self.cipher.encrypt(msg)
-        
-        first_packet = str(hex(len(ciphertext))).encode().replace(b'0x', b'').zfill(8)
-       
-        logger.log_debug(f"Sending First Packet: {first_packet}")
-
-        first_packet = self.cipher.encrypt(first_packet)
-
-        self.socket.sendto(first_packet, (self.dest_ip, self.dest_port))
-        
-        self.socket.sendto(ciphertext, (self.dest_ip, self.dest_port))
-        
-        
-        data, addr = self.socket.recvfrom(16)
-        data = self.cipher.decrypt(data)
-        logger.log_debug(f"Received response: {data}", self.logger_name)
-
-    def recv_data(self):
-        """This function receives data from the server.
-        """
-        
-        full_data = b''
-        data, addr = self.socket.recvfrom(16)
-        data = self.cipher.decrypt(data)
-        logger.log_debug(f"Received First Packet: {data}", self.logger_name)
-        
-        packet_size = int(data, 16)
-        logger.log_debug(f"Packet Size: {packet_size}", self.logger_name)
-        
-        
-        data, addr = self.socket.recvfrom(packet_size)
-        logger.log_debug(f"Received packet: {len(data)}", self.logger_name)
-        msg = b'SUCCESS'
-        msg = self.cipher.encrypt(msg)
-        self.socket.sendto(msg, addr)
-        logger.log_debug(f"Sent response: {msg}", self.logger_name)
-
-        return self.cipher.decrypt(data)
-
 class Encrypted_TCP_Client(Encrypted_TCP_Socket):
-    def __init__(self, ip='127.0.0.1', port=25565, DES_key=None):
+    """This class is used to create a client that uses AES EAX encrypted TCP connection
+    to communicate with the server.
+    """
+    def __init__(self, ip='127.0.0.1', port=25565):
         """This function initializes the socket and connects to the server.
 
         Args:
@@ -430,8 +368,6 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
         self.logger_name = 'TCP Client'
         logger.create_logger(self.logger_name)
         super().__init__(ip, port)
-        if DES_key:
-            self.cipher = Cipher_DES(DES_key)
 
     def handle_connection(self):
         """This function handles the connection to the server.
@@ -457,33 +393,26 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
                 
         self.initiate_encrypted_data_transfer()
 
-    def initiate_encrypted_data_transfer(self):
-        """This function initiates the encrypted data transfer.
+    def initiate_encrypted_data_transfer(self) -> None:
+        """This function initiates the encrypted data transfer with the server.
         """
         logger.log('Initiating encrypted data transfer', log_type='info', logger_name=self.logger_name)
         self.socket.send(b"INITIATE_ENCRYPTED_DATA_TRANSFER")
 
-        logger.log('Sent INITIATE_ENCRYPTED_DATA_TRANSFER', log_type='debug', logger_name=self.logger_name)
-
         server_public_key = self.socket.recv(4096)
-        logger.log('Received server public key', log_type='debug', logger_name=self.logger_name)
         rsa_encryptor = rsa.PublicKey.load_pkcs1(server_public_key)
 
-        msg = self.cipher.get_key()
-
-        logger.log('Generated key', log_type='debug', logger_name=self.logger_name)
-        logger.log(f'Key: {self.cipher.get_key()}', log_type='debug', logger_name=self.logger_name)
+        msg = self.cipher.get_key()#Symmetric AES key
 
         msg = rsa.encrypt(msg, rsa_encryptor)
-        self.socket.send(msg)
-        logger.log('Sent encrypted key', log_type='debug', logger_name=self.logger_name)
-
+        self.socket.send(msg)#send encrypted key
+        
         response = self.recv_data(self.socket)
-        logger.log(f'Received: {response}', log_type='debug', logger_name=self.logger_name)
-
+        
         if response == b'ENCRYPTED_DATA_TRANSFER_INITIATED':
             logger.log('Encrypted data transfer initiated', log_type='info', logger_name=self.logger_name)
         else:
+            #if initation failed, try again
             logger.log('Encrypted data transfer failed to initiate. trying again...', log_type='warning', logger_name=self.logger_name)
             self.initiate_encrypted_data_transfer()
 
@@ -494,6 +423,8 @@ class Encrypted_TCP_Client(Encrypted_TCP_Socket):
         logger.log('Sent MAC address', log_type='debug', logger_name=self.logger_name)
 
 class Encrypted_TCP_Server(Encrypted_TCP_Socket):
+    """This class is used to create a server that communicates using AES EAX encrypted TCP connection
+    """
     def __init__(self, ip = '0.0.0.0', port = 25565, max_connections = 40):
         """This function initializes the socket and waits for a connection from a client.
 
@@ -515,6 +446,7 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
     
     def wait_for_connections(self):
         """This function waits for a connection from a client.
+        for each connection, a new thread is created to handle it.
         """
         self.socket.listen()
         print('Waiting for connections...')

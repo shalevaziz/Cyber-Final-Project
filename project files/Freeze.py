@@ -5,6 +5,8 @@ from threading import Thread
 
 
 class Freezer:
+    """This class freezes the PC - blocks all keyboard and mouse input.
+    """
     def __init__(self):
         """Initializes the Freezer object."""
         self.frozen = False
