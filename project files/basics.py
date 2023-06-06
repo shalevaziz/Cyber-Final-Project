@@ -458,6 +458,5 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
 def main():
     pass
 
-
 if __name__ == "__main__":
     main()

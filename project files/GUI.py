@@ -234,7 +234,7 @@ class Main_Frame(Window):
         url = tk.simpledialog.askstring('Open URL', 'Enter the URL to open')
         if url is None:
             return
-        self.master.server.open_url_on_all(url)
+        self.master.server.open_URL_on_all(url)
 class Edit_Frame(Window):
     """The edit frame of the program.
     """
@@ -430,7 +430,7 @@ class DropDown_Menu(tk.Listbox):
             mac (str): The mac address of the PC.
         """
         text_font = font.Font(family = "Calibri", size = 13)
-        super().__init__(master, width = 11, height = 3, selectmode = tk.SINGLE, font=text_font)
+        super().__init__(master, width = 11, height = 4, selectmode = tk.SINGLE, font=text_font)
         self.mac = mac
 
         self.is_frozen = self.master.master.server.conns[self.mac].is_frozen

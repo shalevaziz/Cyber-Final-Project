@@ -23,7 +23,7 @@ class Client(basics.Encrypted_TCP_Client):
             port (int): The port number of the server to connect to. Default is 25565.
         """
         super().__init__(ip, port)
-        #self.freezer = Freeze.Freezer()
+        self.freezer = Freeze.Freezer()
     
     def handle_connection(self):
         """
@@ -144,7 +144,7 @@ class Client(basics.Encrypted_TCP_Client):
 
 
 def main():
-    client = Client('127.0.0.1', 25565)
+    client = Client('192.168.68.115', 25565)
     client.handle_connection()
     
     
