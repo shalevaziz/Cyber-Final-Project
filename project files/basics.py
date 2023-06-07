@@ -368,6 +368,7 @@ class Encrypted_TCP_Socket:
         
         with open(path, 'wb') as file:
             for i in range(num_packets-1):
+                time.sleep(0.01)
                 data = self.socket.recv(4096)
                 print(len(data))
                 data = self.cipher.decrypt(data)
@@ -378,6 +379,7 @@ class Encrypted_TCP_Socket:
             data = self.cipher.decrypt(data)
             file.write(data)
 
+        return path
 class Encrypted_TCP_Client(Encrypted_TCP_Socket):
     """This class is used to create a client that uses AES EAX encrypted TCP connection
     to communicate with the server.

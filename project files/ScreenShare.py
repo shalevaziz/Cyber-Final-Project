@@ -185,6 +185,7 @@ class Receiver:
         self.cipher = Cipher_ECB(key)
         self.lock = threading.Lock()
         
+        self.started_stream = False
         self.student_mode = student_mode
         
         self.dest_addr = None
@@ -259,6 +260,9 @@ class Receiver:
                 
         state = 1
         screen_name = 'Teacher\'s Screen' if self.student_mode else 'Student\'s Screen'
+        thread = threading.Thread(target=self.listen_for_close, args=(screen_name,))
+        thread.start()
+
         while len(self.data) == 0:
             pass
         
@@ -268,23 +272,37 @@ class Receiver:
         
         while self.stream:
             self.lock.acquire()
+
             img = cv2.imdecode(np.frombuffer(self.data, np.uint8), cv2.IMREAD_COLOR)
+
             try:
                 cv2.imshow(screen_name, img)
+                self.started_stream = True
             except:
                 pass
+
             self.lock.release()
-            
-            if not self.student_mode:
-                try:
-                    state = cv2.getWindowProperty(screen_name, 0)#checks if the window is closed
-                except cv2.error as e:
-                    state -= 1
-            
+            cv2.waitKey(1)
+
+    def listen_for_close(self, screen_name) -> None:
+        if self.student_mode:
+            return
+        state = 1
+        while not self.started_stream:
+            time.sleep(0.1)
+
+    
+        while True:
+            try:
+                state = cv2.getWindowProperty(screen_name, 0)#checks if the window is closed
+            except cv2.error as e:
+                state -= 1
+        
             if state <= 0:#if the window is closed, stop the stream
                 self.stop()
+                break
+        
             
-            cv2.waitKey(1)
 
     def recv_frames(self) -> None:
         """
