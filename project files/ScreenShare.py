@@ -10,7 +10,6 @@ RESOLUTIONS: tuple[int, int] = (1536, 864)
 PACKET_SIZE: int = 65504
 HEADER_SIZE: int = 7
 
-
 class Sender:
     """This class streams the screen to the Receiver.
     """
@@ -53,6 +52,7 @@ class Sender:
         msg, _ = self.s.recvfrom(16)
         if self.cipher.decrypt(msg) == b'STOP000000000000':
             self.stream = False
+            print('stop')
 
     def start_stream(self) -> None:
         """
@@ -284,6 +284,7 @@ class Receiver:
 
             self.lock.release()
             cv2.waitKey()
+        cv2.destroyAllWindows()
 
     def listen_for_close(self, screen_name) -> None:
         if self.student_mode:
