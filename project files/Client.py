@@ -46,6 +46,8 @@ class Client(basics.Encrypted_TCP_Client):
                     self.stop_share_screen()
                 elif msg == 'VIEW_TEACHER_SCREEN':
                     self.view_teacher_screen()
+                elif msg == 'STOP_VIEW_TEACHER_SCREEN':
+                    self.stop_view_teacher_screen()
                 elif msg == 'TERMINATE':
                     break
                 elif msg == 'PING':
@@ -118,8 +120,16 @@ class Client(basics.Encrypted_TCP_Client):
         key = key_and_port[:16]
         port = int.from_bytes(key_and_port[16:], 'big')
         
-        reciever = ScreenShare.Receiver('0.0.0.0', port, key, student_mode=True)
-        threading.Thread(target=reciever.start_stream).start()
+        self.reciever = ScreenShare.Receiver('0.0.0.0', port, key, student_mode=True)
+        threading.Thread(target=self.reciever.start_stream).start()
+
+    def stop_view_teacher_screen(self):
+        try:
+            self.reciever.stop()
+            del self.reciever
+        except:
+            print('cant stop')
+            pass
 
     def recv_file(self, path):
         """
@@ -145,7 +155,7 @@ class Client(basics.Encrypted_TCP_Client):
 
 
 def main():
-    client = Client('127.0.0.1', 25565)
+    client = Client('10.30.56.188', 25565)
     client.handle_connection()
     
     
