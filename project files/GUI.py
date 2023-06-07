@@ -169,6 +169,7 @@ class Main_Frame(Window):
         actions_menu.add_command(label = 'Stream Screen', command = lambda: self.master.server.stream_screen())
         actions_menu.add_command(label = 'Send File', command = self.send_file)
         actions_menu.add_command(label = 'Open URL', command = self.open_url)
+        actions_menu.add_command(label = 'Stop Streaming Screen', command = self.master.server.stop_streaming_screen)
         self.menubar.add_cascade(label = 'Actions', menu = actions_menu)
         
         self.master.config(menu = self.menubar)
@@ -304,7 +305,7 @@ class Basic_PCIcon(tk.Canvas):
             pos (tuple): The position of the PCIcon.
             online (bool, optional): Whether the PC is online or not. Defaults to True.
         """
-        super().__init__(master, width=130, height=130)
+        super().__init__(master, width=150, height=130)
         
         self.mac = mac
         self.online = online
@@ -325,9 +326,9 @@ class Basic_PCIcon(tk.Canvas):
         """Changes the icon of the PCIcon.
         """
         if self.online:
-            self.create_image(10,5, anchor = tk.NW, image = PC_ICON_ONLINE)
+            self.create_image(25,5, anchor = tk.NW, image = PC_ICON_ONLINE)
         else:
-            self.create_image(10,5, anchor = tk.NW, image = PC_ICON_OFFLINE)
+            self.create_image(25,5, anchor = tk.NW, image = PC_ICON_OFFLINE)
 
 class PCIcon_Edit_Mode(Basic_PCIcon):
     """The PCIcon object for the edit frame.

@@ -28,7 +28,7 @@ class Server(basics.Encrypted_TCP_Server):
         
         self.streaming_screen = False
                 
-        Thread(target=self.ping_all).start()
+        #Thread(target=self.ping_all).start()
 
     def get_allowed_pcs(self):
         """Gets the allowed pcs from the locations.json file.
@@ -137,9 +137,17 @@ class Server(basics.Encrypted_TCP_Server):
     def stop_streaming_screen(self):
         """This function stops streaming the screen to all the connected clients.
         """
-        self.streamer.stop_stream()
-        del self.streamer
-        self.streaming_screen = False
+        print('a')
+        if self.streaming_screen:
+            self.streamer.stop_stream()
+            print('b')
+            self.streaming_screen = False
+            print('c')
+            for conn in self.conns.values():
+                Thread(target=conn.stop_view_teacher_screen).start()
+                print('d')
+        else: 
+            print('e')
     
     def send_file_to_all(self, path):
         """This function sends a file to all the connected clients.
@@ -261,7 +269,7 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         
         receiver = ScreenShare.Receiver(self.ip, port, self.cipher.get_key()[:16])
         Thread(target = receiver.start_stream).start()
-    
+
     def freeze(self):
         """This function freezes the screen of the client.
         """
@@ -325,6 +333,9 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
         """
         self.send_data('RECV_FILE')
         return super().send_file(path)
+    
+    def stop_view_teacher_screen(self):
+        self.send_data('STOP_VIEW_TEACHER_SCREEN')
 
 def main():
     server = Server()

@@ -199,12 +199,13 @@ class Receiver:
             None
         """
         self.stream = False
-        cv2.destroyAllWindows()
         msg = b'STOP000000000000'
         msg = self.cipher.encrypt(msg)
         self.s.sendto(msg, self.dest_addr)
+        print('sent stop to', self.dest_addr)
         time.sleep(1)
         self.s.close()
+        del self
         
         
     def start_stream(self) -> None:
@@ -282,7 +283,7 @@ class Receiver:
                 pass
 
             self.lock.release()
-            cv2.waitKey(1)
+            cv2.waitKey()
 
     def listen_for_close(self, screen_name) -> None:
         if self.student_mode:
@@ -298,9 +299,11 @@ class Receiver:
             except cv2.error as e:
                 state -= 1
         
-            if state <= 0:#if the window is closed, stop the stream
+            if state < 0:#if the window is closed, stop the stream
+                print(state)
                 self.stop()
                 break
+            cv2.waitKey()
         
             
 
