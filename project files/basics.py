@@ -75,6 +75,30 @@ class Useful_Functions:
                 if not data:
                     break
                 yield data
+
+    @staticmethod
+    def correct_URL_format(url: str) -> str:
+        """This function corrects the URL format.
+        The output format is: http://www.example.com
+
+        Args:
+            url (str): The URL to correct
+
+        Returns:
+            str: The corrected URL
+        """
+        url = url.strip().lower()
+        if not url.startswith('http://') and not url.startswith('https://'):
+            url = 'http://' + url
+        
+        if 'www.' not in url:
+            if 'http://' in url:
+                url = url.replace('http://', 'http://www.')
+            elif 'https://' in url:
+                url = url.replace('https://', 'https://www.')
+        
+        return url
+        
 class Cipher:
     """This class is used to encrypt and decrypt messages using AES-EAX mode.
     It also authenticates the messages using HMAC.

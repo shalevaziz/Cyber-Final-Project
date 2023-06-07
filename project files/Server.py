@@ -301,9 +301,8 @@ class Client_Socket(basics.Encrypted_TCP_Socket):
             URL (str): The URL to open.
         """
         self.send_data('OPEN_URL')
+        URL = basics.Useful_Functions.correct_URL_format(URL)
         self.send_data(URL.encode())
-        self.send_data('ADD_APP')
-        self.send_data(path.encode())
     
     def share_screen(self, key, port):
         """This function shares the screen of the client with the teacher.

@@ -186,6 +186,8 @@ class Receiver:
         self.lock = threading.Lock()
         
         self.student_mode = student_mode
+        
+        self.dest_addr = None
     
     def stop(self) -> None:
         """
@@ -196,6 +198,13 @@ class Receiver:
             None
         """
         self.stream = False
+        cv2.destroyAllWindows()
+        msg = b'STOP000000000000'
+        msg = self.cipher.encrypt(msg)
+        self.s.sendto(msg, self.dest_addr)
+        time.sleep(1)
+        self.s.close()
+        
         
     def start_stream(self) -> None:
         """
@@ -221,7 +230,7 @@ class Receiver:
         packets = []
 
         self.lock.acquire()
-        first, _ = self.s.recvfrom(PACKET_SIZE)
+        first, self.dest_addr = self.s.recvfrom(PACKET_SIZE)
         first = self.cipher.decrypt(first)
         data_len = int.from_bytes(first[:3], 'big')
         num_packets = int.from_bytes(first[3:5], 'big')
@@ -272,10 +281,8 @@ class Receiver:
                 except cv2.error as e:
                     state -= 1
             
-            if state < 0:#if the window is closed, stop the stream
-                self.stream = False
-                cv2.destroyAllWindows()
-                break
+            if state <= 0:#if the window is closed, stop the stream
+                self.stop()
             
             cv2.waitKey(1)
 

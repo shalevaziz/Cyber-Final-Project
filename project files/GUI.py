@@ -234,7 +234,7 @@ class Main_Frame(Window):
         url = tk.simpledialog.askstring('Open URL', 'Enter the URL to open')
         if url is None:
             return
-        self.master.server.open_URL_on_all(url)
+        self.master.server.open_URL_in_all(url)
 class Edit_Frame(Window):
     """The edit frame of the program.
     """
