@@ -51,7 +51,7 @@ class Sender:
         """
         msg, _ = self.s.recvfrom(16)
         if self.cipher.decrypt(msg) == b'STOP000000000000':
-            self.stop()
+            self.stream = False
             print('stop')
 
     def start_stream(self) -> None:
@@ -110,16 +110,6 @@ class Sender:
 
         return packets
 
-    def stop(self) -> None:
-        """
-        Stops the stream.
-
-        Returns:
-            None
-        """
-        self.stream = False
-        self.s.close()
-
     def send_data(self, packets: list[bytes]) -> None:
         """
         Sends data to the client.
@@ -130,16 +120,9 @@ class Sender:
         Returns:
             None
         """
-        try:
-            for packet in packets:
-                self.s.sendto(packet, (self.dest_ip, self.dest_port))
-                time.sleep(0.001)#The receiver can't handle the data if it's sent too fast.
-        except OSError:
-            self.stop()
-        except ConnectionResetError:
-            self.stop()
-            
-
+        for packet in packets:
+            self.s.sendto(packet, (self.dest_ip, self.dest_port))
+            time.sleep(0.001)#The receiver can't handle the data if it's sent too fast.
 
 class MultiSender(Sender):
     """A class that broadcasts this PC's screen to multiple remote destinations.
@@ -177,7 +160,6 @@ class MultiSender(Sender):
         """A function that stops the stream.
         """
         self.stream = False
-        self.s.close()
 
 class Receiver:
     """A class that receives the screen data from the sender.
@@ -217,12 +199,11 @@ class Receiver:
             None
         """
         self.stream = False
-        if not self.student_mode:
-            msg = b'STOP000000000000'
-            msg = self.cipher.encrypt(msg)
-            self.s.sendto(msg, self.dest_addr)
-            print('sent stop to', self.dest_addr)
-            time.sleep(1)
+        msg = b'STOP000000000000'
+        msg = self.cipher.encrypt(msg)
+        self.s.sendto(msg, self.dest_addr)
+        print('sent stop to', self.dest_addr)
+        time.sleep(1)
         self.s.close()
         del self
         
@@ -266,6 +247,7 @@ class Receiver:
         packets = sorted(packets, key=lambda x: int.from_bytes(x[:2], 'big'))
         packets = [packet[2:] for packet in packets]
         data = b''.join(packets)
+        data = data[:data_len]
 
         
         return data
@@ -302,8 +284,7 @@ class Receiver:
                 pass
 
             self.lock.release()
-            cv2.waitKey(1)
-        cv2.destroyAllWindows()
+            cv2.waitKey()
 
     def listen_for_close(self, screen_name) -> None:
         if self.student_mode:
@@ -323,7 +304,7 @@ class Receiver:
                 print(state)
                 self.stop()
                 break
-            cv2.waitKey(1)
+            cv2.waitKey()
         
             
 
@@ -334,14 +315,8 @@ class Receiver:
         Returns:
             None
         """
-        try:
-            while self.stream:
-                self.data = self.recv_frame()
-        except OSError:
-            self.stop()
-        except ConnectionResetError:
-            self.stop()
-
+        while self.stream:
+            self.data = self.recv_frame()
 
 
 def main():

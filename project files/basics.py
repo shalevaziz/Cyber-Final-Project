@@ -370,7 +370,6 @@ class Encrypted_TCP_Socket:
             for i in range(num_packets-1):
                 time.sleep(0.01)
                 data = self.socket.recv(4096)
-                print(len(data))
                 data = self.cipher.decrypt(data)
                 file.write(data)
             data = self.socket.recv(last)
@@ -482,7 +481,8 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
             Thread(target=self.handle_connection, args=(client_soc, client_address)).start()
 
 def main():
-    pass
+    cipher = Cipher()
+    print(len(cipher.encrypt(b'1')))
 
 if __name__ == "__main__":
     main()
