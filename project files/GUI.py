@@ -30,8 +30,6 @@ class Main_Window(tk.Tk):
         self.current_frame = self.frames[self.current_frame_name](self)
         self.current_frame.pack(anchor='nw', fill='both', expand=True)
         
-
-        
         self.mainloop()
     
     def load_frames(self):
@@ -236,6 +234,7 @@ class Main_Frame(Window):
         if url is None:
             return
         self.master.server.open_URL_in_all(url)
+
 class Edit_Frame(Window):
     """The edit frame of the program.
     """
@@ -490,4 +489,3 @@ class DropDown_Menu(tk.Listbox):
             str: The mac address of the PC.
         """
         return self.mac
-

@@ -205,9 +205,9 @@ class Receiver:
         print('sent stop to', self.dest_addr)
         time.sleep(1)
         self.s.close()
+        cv2.destroyAllWindows()
         del self
-        
-        
+    
     def start_stream(self) -> None:
         """
         Starts the stream.
@@ -284,7 +284,7 @@ class Receiver:
                 pass
 
             self.lock.release()
-            cv2.waitKey()
+            cv2.waitKey(1)
 
     def listen_for_close(self, screen_name) -> None:
         if self.student_mode:
@@ -304,7 +304,7 @@ class Receiver:
                 print(state)
                 self.stop()
                 break
-            cv2.waitKey()
+            cv2.waitKey(1)
         
             
 

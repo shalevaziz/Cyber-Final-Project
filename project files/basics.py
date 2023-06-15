@@ -13,6 +13,7 @@ from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import SHA256
 import socket
 from threading import Thread
+import threading
 import time
 import math
 from logger import Logger
@@ -247,6 +248,7 @@ class Encrypted_TCP_Socket:
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.cipher = Cipher()
+        self.communication_lock = threading.Lock()
         
     def handle_connection(self):
         """This function handles the connection to the server.
@@ -257,6 +259,63 @@ class Encrypted_TCP_Socket:
         """This function initiates the encrypted data transfer.
         """
         raise NotImplementedError("This function must be implemented by a subclass")
+    
+    def __safe_send_packet(self, packet: bytes, socket: socket.socket = None) -> bool:
+        """This function sends a packet to the connected peer. It ensures that the packet is sent successfully.
+        
+
+        Args:
+            packet (bytes): The packet to send. the packet should be already encrypted.
+            socket (socket): The socket used to send the packet.
+
+        Returns:
+            bool: True if the packet was sent successfully, False otherwise.
+        """
+        if socket == None:
+            socket = self.socket
+        
+        socket.sendall(packet)
+        response = socket.recv(33)
+        response = self.cipher.decrypt(response)
+        
+        for i in range(10):
+            try:
+                if response == b'1':
+                    return True
+                socket.sendall(packet)
+                response = socket.recv(33)
+                response = self.cipher.decrypt(response)
+            except:
+                return False
+    
+    def __safe_recv_packet(self, socket: socket.socket = None, packet_size: int = 4096) -> bytes:
+        """This function receives a packet from the connected peer. It ensures that the packet is received successfully.
+        
+
+        Args:
+            socket (socket): The socket used to receive the packet.
+            packet_size (int): The size of the packet to receive.
+
+        Returns:
+            bytes: The received packet.
+        """
+        if socket == None:
+            socket = self.socket
+        for i in range(10):
+            packet = socket.recv(packet_size)
+            try:
+                packet = self.cipher.decrypt(packet)
+                msg = b'1'
+                msg = self.cipher.encrypt(msg)
+                socket.sendall(msg)
+                break
+            except:
+                msg = b'0'
+                msg = self.cipher.encrypt(msg)
+                socket.sendall(msg)
+                packet = b''
+                
+        return packet
     
     def send_data(self, msg, socket:socket.socket = None, packet_size:int =4096, is_file:bool = False) -> bool:
         """This function encrypts the message and sends it to the server.
@@ -277,6 +336,10 @@ class Encrypted_TCP_Socket:
         first_packet += packet_size.to_bytes(16, byteorder='big')
         first_packet += len(packets[-1]).to_bytes(16, byteorder='big')
         first_packet = self.cipher.encrypt(first_packet)
+        
+        #! Acquired lock
+        self.communication_lock.acquire()
+        
         socket.send(first_packet)
         
         for packet in packets:
@@ -284,6 +347,9 @@ class Encrypted_TCP_Socket:
 
         response = socket.recv(39)
         response = self.cipher.decrypt(response)
+        
+        #! Released lock
+        self.communication_lock.release()
         
         return response == b"SUCCESS"
 
@@ -294,6 +360,10 @@ class Encrypted_TCP_Socket:
             socket = self.socket
 
         full_data = b''
+        
+        #! Acquired lock
+        self.communication_lock.acquire()
+        
         data = socket.recv(80)
         data = self.cipher.decrypt(data)
         num_packets = int.from_bytes(data[:16], byteorder='big')
@@ -316,6 +386,9 @@ class Encrypted_TCP_Socket:
             
         msg = self.cipher.encrypt(msg)
         socket.send(msg)
+        
+        #! Released lock
+        self.communication_lock.release()
         
         return full_data
     
@@ -341,14 +414,19 @@ class Encrypted_TCP_Socket:
         msg = num_packets + last + filename
         
         self.send_data(msg)
+        
+        #! Acuired lock
+        self.communication_lock.acquire()
+        
         try:
             for buffer in file_gen:
                 buffer = self.cipher.encrypt(buffer)
-                print(buffer, len(buffer))
-                
-                self.socket.sendall(buffer)
+                self.__safe_send_packet(buffer)
         except StopIteration:
             print('sent eof')
+        
+        #! Released lock
+        self.communication_lock.release()
         
     def recv_file(self, path):
         """This function receives a file from the server.
@@ -356,6 +434,8 @@ class Encrypted_TCP_Socket:
         Args:
             path (string): The path to save the file to.
         """
+        
+        
         msg = self.recv_data()
         
         num_packets = int.from_bytes(msg[:32], 'big')
@@ -366,16 +446,23 @@ class Encrypted_TCP_Socket:
         
         path = os.path.join(path, filename)
         
+        
+        
         with open(path, 'wb') as file:
+            print('opened file')
+            
+            #! Acquired lock
+            self.communication_lock.acquire()
+            
             for i in range(num_packets-1):
                 time.sleep(0.01)
-                data = self.socket.recv(4096)
-                data = self.cipher.decrypt(data)
+                data = self.__safe_recv_packet()
                 file.write(data)
-            data = self.socket.recv(last)
-            print(len(data))
+            data = self.__safe_recv_packet(packet_size=last)
             
-            data = self.cipher.decrypt(data)
+            #! Released lock
+            self.communication_lock.release()
+            
             file.write(data)
 
         return path
@@ -482,7 +569,7 @@ class Encrypted_TCP_Server(Encrypted_TCP_Socket):
 
 def main():
     cipher = Cipher()
-    print(len(cipher.encrypt(b'1')))
-
+    print(len("".encode()))
+    
 if __name__ == "__main__":
     main()

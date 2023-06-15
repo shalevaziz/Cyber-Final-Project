@@ -28,7 +28,7 @@ class Server(basics.Encrypted_TCP_Server):
         
         self.streaming_screen = False
                 
-        #Thread(target=self.ping_all).start()
+        Thread(target=self.ping_all).start()
 
     def get_allowed_pcs(self):
         """Gets the allowed pcs from the locations.json file.
@@ -166,7 +166,6 @@ class Server(basics.Encrypted_TCP_Server):
         """
         for conn in self.conns.values():
             Thread(target=conn.open_URL, args=(URL,)).start()
-
 class Client_Socket(basics.Encrypted_TCP_Socket):
     """This class represents a client socket. It is used to communicate with the one client, from the server.
     """

@@ -155,7 +155,7 @@ class Client(basics.Encrypted_TCP_Client):
 
 
 def main():
-    client = Client('192.168.68.122', 25565)
+    client = Client('127.0.0.1', 25565)
     client.handle_connection()
     
     
