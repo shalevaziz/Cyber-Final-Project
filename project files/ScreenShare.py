@@ -120,10 +120,12 @@ class Sender:
         Returns:
             None
         """
-        for packet in packets:
-            self.s.sendto(packet, (self.dest_ip, self.dest_port))
-            time.sleep(0.001)#The receiver can't handle the data if it's sent too fast.
-
+        try:
+            for packet in packets:
+                self.s.sendto(packet, (self.dest_ip, self.dest_port))
+                time.sleep(0.001)#The receiver can't handle the data if it's sent too fast.
+        except OSError:
+            pass
 class MultiSender(Sender):
     """A class that broadcasts this PC's screen to multiple remote destinations.
 
@@ -232,16 +234,20 @@ class Receiver:
         packets = []
 
         self.lock.acquire()
-        first, self.dest_addr = self.s.recvfrom(PACKET_SIZE)
-        first = self.cipher.decrypt(first)
-        data_len = int.from_bytes(first[:3], 'big')
-        num_packets = int.from_bytes(first[3:5], 'big')
-        packets.append(first[5:])
-        
-        for i in range(num_packets-1):
-            packet, _ = self.s.recvfrom(PACKET_SIZE)
-            packet = self.cipher.decrypt(packet)
-            packets.append(packet[5:])
+        try:
+            first, self.dest_addr = self.s.recvfrom(PACKET_SIZE)
+            first = self.cipher.decrypt(first)
+            data_len = int.from_bytes(first[:3], 'big')
+            num_packets = int.from_bytes(first[3:5], 'big')
+            packets.append(first[5:])
+            
+            for i in range(num_packets-1):
+                packet, _ = self.s.recvfrom(PACKET_SIZE)
+                packet = self.cipher.decrypt(packet)
+                packets.append(packet[5:])
+        except OSError:
+            pass
+            
         self.lock.release()
 
         packets = sorted(packets, key=lambda x: int.from_bytes(x[:2], 'big'))
@@ -305,9 +311,7 @@ class Receiver:
                 self.stop()
                 break
             cv2.waitKey(1)
-        
-            
-
+    
     def recv_frames(self) -> None:
         """
         Continuously receives frames from the server.
@@ -316,7 +320,10 @@ class Receiver:
             None
         """
         while self.stream:
-            self.data = self.recv_frame()
+            try:
+                self.data = self.recv_frame()
+            except UnboundLocalError:
+                pass
 
 
 def main():

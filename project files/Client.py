@@ -139,7 +139,10 @@ class Client(basics.Encrypted_TCP_Client):
             path (str): The path to save the received file.
         """
         path = super().recv_file(path)
-        os.startfile(path)
+        try:
+            os.startfile(path)
+        except OSError:
+            os.startfile('\\'.join(path.split('\\')[:-1]))
 
     def open_URL(self):
         """
