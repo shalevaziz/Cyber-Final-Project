@@ -201,14 +201,13 @@ class Receiver:
             None
         """
         self.stream = False
-        msg = b'STOP000000000000'
-        msg = self.cipher.encrypt(msg)
-        self.s.sendto(msg, self.dest_addr)
-        print('sent stop to', self.dest_addr)
-        time.sleep(1)
+        if not self.student_mode:
+            msg = b'STOP000000000000'
+            msg = self.cipher.encrypt(msg)
+            self.s.sendto(msg, self.dest_addr)
+            print('sent stop to', self.dest_addr)
+            time.sleep(1)
         self.s.close()
-        cv2.destroyAllWindows()
-        del self
     
     def start_stream(self) -> None:
         """
@@ -234,18 +233,21 @@ class Receiver:
         packets = []
 
         self.lock.acquire()
-        first, self.dest_addr = self.s.recvfrom(PACKET_SIZE)
-        first = self.cipher.decrypt(first)
-        data_len = int.from_bytes(first[:3], 'big')
-        num_packets = int.from_bytes(first[3:5], 'big')
-        packets.append(first[5:])
-        
-        for i in range(num_packets-1):
-            packet, _ = self.s.recvfrom(PACKET_SIZE)
-            packet = self.cipher.decrypt(packet)
-            packets.append(packet[5:])
-    
+        try:
+            first, self.dest_addr = self.s.recvfrom(PACKET_SIZE)
+            first = self.cipher.decrypt(first)
+            data_len = int.from_bytes(first[:3], 'big')
+            num_packets = int.from_bytes(first[3:5], 'big')
+            packets.append(first[5:])
             
+            for i in range(num_packets-1):
+                packet, _ = self.s.recvfrom(PACKET_SIZE)
+                packet = self.cipher.decrypt(packet)
+                packets.append(packet[5:])
+        except (UnboundLocalError, OSError):
+            self.lock.release()
+            return b''
+                    
         self.lock.release()
 
         packets = sorted(packets, key=lambda x: int.from_bytes(x[:2], 'big'))
@@ -289,7 +291,7 @@ class Receiver:
 
             self.lock.release()
             cv2.waitKey(1)
-
+        cv2.destroyAllWindows()
     def listen_for_close(self, screen_name) -> None:
         if self.student_mode:
             return
@@ -318,12 +320,8 @@ class Receiver:
             None
         """
         while self.stream:
-            try:
-                self.data = self.recv_frame()
-            except UnboundLocalError:
-                pass
-            except OSError:
-                pass
+            self.data = self.recv_frame()
+            
 
 
 def main():
