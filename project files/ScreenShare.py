@@ -234,19 +234,17 @@ class Receiver:
         packets = []
 
         self.lock.acquire()
-        try:
-            first, self.dest_addr = self.s.recvfrom(PACKET_SIZE)
-            first = self.cipher.decrypt(first)
-            data_len = int.from_bytes(first[:3], 'big')
-            num_packets = int.from_bytes(first[3:5], 'big')
-            packets.append(first[5:])
-            
-            for i in range(num_packets-1):
-                packet, _ = self.s.recvfrom(PACKET_SIZE)
-                packet = self.cipher.decrypt(packet)
-                packets.append(packet[5:])
-        except OSError:
-            pass
+        first, self.dest_addr = self.s.recvfrom(PACKET_SIZE)
+        first = self.cipher.decrypt(first)
+        data_len = int.from_bytes(first[:3], 'big')
+        num_packets = int.from_bytes(first[3:5], 'big')
+        packets.append(first[5:])
+        
+        for i in range(num_packets-1):
+            packet, _ = self.s.recvfrom(PACKET_SIZE)
+            packet = self.cipher.decrypt(packet)
+            packets.append(packet[5:])
+    
             
         self.lock.release()
 
@@ -323,6 +321,8 @@ class Receiver:
             try:
                 self.data = self.recv_frame()
             except UnboundLocalError:
+                pass
+            except OSError:
                 pass
 
 
